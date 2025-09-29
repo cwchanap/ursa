@@ -1,0 +1,451 @@
+---
+// ObjectDetectionOverlay component for displaying detection results and controls
+export interface Props {
+  containerId?: string;
+  showControls?: boolean;
+  showStats?: boolean;
+  className?: string;
+}
+
+const { 
+  containerId = "detection-container", 
+  showControls = true, 
+  showStats = true,
+  className = ""
+} = Astro.props;
+---
+
+<div class={`object-detection-overlay ${className}`}>
+  {showControls && (
+    <div id="detection-controls" class="detection-controls bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg">
+      <div class="flex flex-col space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-800">Object Detection</h3>
+          <div class="flex space-x-2">
+            <button 
+              id="detect-btn" 
+              class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span class="detect-btn-text">Detect Objects</span>
+            </button>
+            <button 
+              id="clear-detections-btn" 
+              class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <label for="confidence-slider" class="block text-sm font-medium text-gray-700">
+              Confidence Threshold: <span id="confidence-value">50</span>%
+            </label>
+            <input 
+              type="range" 
+              id="confidence-slider" 
+              min="10" 
+              max="95" 
+              value="50" 
+              class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            >
+          </div>
+          
+          <div class="space-y-2">
+            <label for="max-detections-slider" class="block text-sm font-medium text-gray-700">
+              Max Detections: <span id="max-detections-value">20</span>
+            </label>
+            <input 
+              type="range" 
+              id="max-detections-slider" 
+              min="1" 
+              max="50" 
+              value="20" 
+              class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            >
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <label class="flex items-center space-x-2">
+            <input type="checkbox" id="show-labels" checked class="rounded">
+            <span class="text-sm text-gray-700">Show Labels</span>
+          </label>
+          <label class="flex items-center space-x-2">
+            <input type="checkbox" id="show-scores" checked class="rounded">
+            <span class="text-sm text-gray-700">Show Scores</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {showStats && (
+    <div id="detection-stats" class="detection-stats bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg hidden">
+      <h4 class="text-md font-semibold text-gray-800 mb-2">Detection Results</h4>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-600">Objects Found:</span>
+          <span id="objects-count" class="font-medium">-</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-600">Inference Time:</span>
+          <span id="inference-time" class="font-medium">-</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-600">Model Status:</span>
+          <span id="model-status" class="font-medium text-gray-500">Not loaded</span>
+        </div>
+      </div>
+      
+      <div id="detected-objects-list" class="mt-3">
+        <h5 class="text-sm font-medium text-gray-700 mb-1">Detected Objects:</h5>
+        <div id="objects-list" class="space-y-1 max-h-32 overflow-y-auto">
+          <!-- Objects will be populated here -->
+        </div>
+      </div>
+    </div>
+  )}
+
+  <!-- Loading Indicator -->
+  <div id="detection-loading" class="detection-loading bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg hidden">
+    <div class="flex items-center space-x-3">
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+      <span class="text-gray-700">
+        <span id="loading-text">Loading model...</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Error Display -->
+  <div id="detection-error" class="detection-error bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg hidden">
+    <div class="flex items-start space-x-3">
+      <div class="flex-shrink-0">
+        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+        </svg>
+      </div>
+      <div>
+        <h4 class="text-sm font-medium text-red-800">Detection Error</h4>
+        <p id="error-message" class="text-sm text-red-600 mt-1">An error occurred during object detection.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+import { ObjectDetection, type DetectionResult } from '../lib/objectDetection.ts';
+
+class ObjectDetectionOverlay {
+  private detector: ObjectDetection;
+  private isInitialized = false;
+  private currentMediaElement: HTMLImageElement | HTMLVideoElement | null = null;
+  private currentContainer: HTMLElement | null = null;
+  
+  // UI Elements
+  private detectBtn: HTMLButtonElement | null = null;
+  private clearBtn: HTMLButtonElement | null = null;
+  private confidenceSlider: HTMLInputElement | null = null;
+  private confidenceValue: HTMLSpanElement | null = null;
+  private maxDetectionsSlider: HTMLInputElement | null = null;
+  private maxDetectionsValue: HTMLSpanElement | null = null;
+  private showLabelsCheckbox: HTMLInputElement | null = null;
+  private showScoresCheckbox: HTMLInputElement | null = null;
+  private statsContainer: HTMLElement | null = null;
+  private objectsCount: HTMLSpanElement | null = null;
+  private inferenceTime: HTMLSpanElement | null = null;
+  private modelStatus: HTMLSpanElement | null = null;
+  private objectsList: HTMLElement | null = null;
+  private loadingContainer: HTMLElement | null = null;
+  private loadingText: HTMLSpanElement | null = null;
+  private errorContainer: HTMLElement | null = null;
+  private errorMessage: HTMLParagraphElement | null = null;
+
+  constructor() {
+    this.detector = new ObjectDetection();
+    this.initializeElements();
+    this.bindEvents();
+    this.initializeDetector();
+  }
+
+  private initializeElements() {
+    // Control elements
+    this.detectBtn = document.getElementById('detect-btn') as HTMLButtonElement;
+    this.clearBtn = document.getElementById('clear-detections-btn') as HTMLButtonElement;
+    this.confidenceSlider = document.getElementById('confidence-slider') as HTMLInputElement;
+    this.confidenceValue = document.getElementById('confidence-value') as HTMLSpanElement;
+    this.maxDetectionsSlider = document.getElementById('max-detections-slider') as HTMLInputElement;
+    this.maxDetectionsValue = document.getElementById('max-detections-value') as HTMLSpanElement;
+    this.showLabelsCheckbox = document.getElementById('show-labels') as HTMLInputElement;
+    this.showScoresCheckbox = document.getElementById('show-scores') as HTMLInputElement;
+
+    // Stats elements
+    this.statsContainer = document.getElementById('detection-stats') as HTMLElement;
+    this.objectsCount = document.getElementById('objects-count') as HTMLSpanElement;
+    this.inferenceTime = document.getElementById('inference-time') as HTMLSpanElement;
+    this.modelStatus = document.getElementById('model-status') as HTMLSpanElement;
+    this.objectsList = document.getElementById('objects-list') as HTMLElement;
+
+    // Status elements
+    this.loadingContainer = document.getElementById('detection-loading') as HTMLElement;
+    this.loadingText = document.getElementById('loading-text') as HTMLSpanElement;
+    this.errorContainer = document.getElementById('detection-error') as HTMLElement;
+    this.errorMessage = document.getElementById('error-message') as HTMLParagraphElement;
+  }
+
+  private bindEvents() {
+    // Detection controls
+    this.detectBtn?.addEventListener('click', () => this.handleDetection());
+    this.clearBtn?.addEventListener('click', () => this.clearDetections());
+
+    // Slider updates
+    this.confidenceSlider?.addEventListener('input', (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      if (this.confidenceValue) this.confidenceValue.textContent = value;
+      this.updateDetectorOptions();
+    });
+
+    this.maxDetectionsSlider?.addEventListener('input', (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      if (this.maxDetectionsValue) this.maxDetectionsValue.textContent = value;
+      this.updateDetectorOptions();
+    });
+
+    // Checkbox updates
+    this.showLabelsCheckbox?.addEventListener('change', () => this.updateDetectorOptions());
+    this.showScoresCheckbox?.addEventListener('change', () => this.updateDetectorOptions());
+  }
+
+  private async initializeDetector() {
+    try {
+      this.showLoading('Loading object detection model...');
+      await this.detector.initialize();
+      this.isInitialized = true;
+      if (this.modelStatus) {
+        this.modelStatus.textContent = 'Ready';
+        this.modelStatus.className = 'font-medium text-green-600';
+      }
+      this.hideLoading();
+    } catch (error) {
+      this.showError(`Failed to initialize object detection: ${error}`);
+      if (this.modelStatus) {
+        this.modelStatus.textContent = 'Error';
+        this.modelStatus.className = 'font-medium text-red-600';
+      }
+    }
+  }
+
+  private updateDetectorOptions() {
+    if (!this.detector) return;
+
+    this.detector.updateOptions({
+      minScore: parseInt(this.confidenceSlider?.value || '50') / 100,
+      maxDetections: parseInt(this.maxDetectionsSlider?.value || '20'),
+      showLabels: this.showLabelsCheckbox?.checked ?? true,
+      showScores: this.showScoresCheckbox?.checked ?? true,
+    });
+  }
+
+  public setMediaElement(
+    mediaElement: HTMLImageElement | HTMLVideoElement,
+    container: HTMLElement
+  ) {
+    this.currentMediaElement = mediaElement;
+    this.currentContainer = container;
+  }
+
+  private async handleDetection() {
+    if (!this.isInitialized || !this.currentMediaElement || !this.currentContainer) {
+      this.showError('Detection not ready or no media element set');
+      return;
+    }
+
+    try {
+      this.showLoading('Detecting objects...');
+      this.hideError();
+
+      const result = await this.detector.processImage(
+        this.currentMediaElement as HTMLImageElement,
+        this.currentContainer
+      );
+
+      this.displayResults(result);
+      this.hideLoading();
+    } catch (error) {
+      this.showError(`Detection failed: ${error}`);
+      this.hideLoading();
+    }
+  }
+
+  private displayResults(result: DetectionResult) {
+    // Update stats
+    if (this.objectsCount) this.objectsCount.textContent = result.objects.length.toString();
+    if (this.inferenceTime) this.inferenceTime.textContent = `${Math.round(result.inferenceTime)}ms`;
+    this.statsContainer?.classList.remove('hidden');
+
+    // Update objects list
+    if (this.objectsList) {
+      this.objectsList.innerHTML = '';
+      
+      if (result.objects.length === 0) {
+        this.objectsList.innerHTML = '<p class="text-sm text-gray-500">No objects detected</p>';
+      } else {
+        result.objects.forEach((obj) => {
+          const objectDiv = document.createElement('div');
+          objectDiv.className = 'text-xs bg-gray-100 rounded px-2 py-1';
+          objectDiv.innerHTML = `
+            <span class="font-medium">${obj.class}</span>
+            <span class="text-gray-600">(${(obj.score * 100).toFixed(1)}%)</span>
+          `;
+          this.objectsList!.appendChild(objectDiv);
+        });
+      }
+    }
+  }
+
+  private clearDetections() {
+    if (this.currentContainer) {
+      const overlay = this.currentContainer.querySelector('.detection-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+    }
+    
+    this.statsContainer?.classList.add('hidden');
+    this.hideError();
+  }
+
+  private showLoading(message: string) {
+    if (this.loadingText) this.loadingText.textContent = message;
+    this.loadingContainer?.classList.remove('hidden');
+    if (this.detectBtn) {
+      this.detectBtn.disabled = true;
+    }
+  }
+
+  private hideLoading() {
+    this.loadingContainer?.classList.add('hidden');
+    if (this.detectBtn) {
+      this.detectBtn.disabled = false;
+    }
+  }
+
+  private showError(message: string) {
+    if (this.errorMessage) this.errorMessage.textContent = message;
+    this.errorContainer?.classList.remove('hidden');
+  }
+
+  private hideError() {
+    this.errorContainer?.classList.add('hidden');
+  }
+
+  public getDetector(): ObjectDetection {
+    return this.detector;
+  }
+
+  public isReady(): boolean {
+    return this.isInitialized;
+  }
+}
+
+// Export for global use
+if (typeof window !== 'undefined') {
+  // Add to window object
+  Object.assign(window, {
+    ObjectDetectionOverlay: ObjectDetectionOverlay
+  });
+
+  // Initialize when DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    Object.assign(window, {
+      detectionOverlay: new ObjectDetectionOverlay()
+    });
+  });
+}
+</script>
+
+<style>
+.object-detection-overlay {
+  position: relative;
+  z-index: 20;
+}
+
+.detection-controls,
+.detection-stats,
+.detection-loading,
+.detection-error {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  min-width: 320px;
+  max-width: 400px;
+  z-index: 30;
+}
+
+.detection-stats {
+  top: 180px;
+}
+
+.detection-loading {
+  top: 100px;
+}
+
+.detection-error {
+  top: 100px;
+}
+
+/* Custom slider styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: none;
+}
+
+/* Loading animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .detection-controls,
+  .detection-stats,
+  .detection-loading,
+  .detection-error {
+    position: relative;
+    top: auto;
+    right: auto;
+    margin: 10px;
+    min-width: auto;
+    max-width: none;
+  }
+}
+</style>

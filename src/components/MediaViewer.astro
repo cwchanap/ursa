@@ -1,5 +1,6 @@
 ---
-// MediaViewer component for handling image and video display
+// MediaViewer component for handling image and video display with object detection
+import ObjectDetectionOverlay from './ObjectDetectionOverlay.astro';
 ---
 
 <div id="media-viewer" class="w-full max-w-4xl mx-auto p-6">
@@ -26,15 +27,17 @@
     <div class="bg-gray-100 rounded-lg p-6">
       <h2 class="text-2xl font-bold mb-4 text-center">Video Mode</h2>
       <div class="flex flex-col items-center space-y-4">
-        <video 
-          id="camera-video" 
-          autoplay 
-          muted 
-          playsinline
-          class="max-w-full h-auto rounded-lg shadow-lg"
-          style="max-height: 400px;"
-        >
-        </video>
+        <div id="video-container" class="relative">
+          <video 
+            id="camera-video" 
+            autoplay 
+            muted 
+            playsinline
+            class="max-w-full h-auto rounded-lg shadow-lg"
+            style="max-height: 400px;"
+          >
+          </video>
+        </div>
         <div class="flex space-x-4">
           <button 
             id="start-camera-btn"
@@ -48,6 +51,18 @@
           >
             Stop Camera
           </button>
+          <button 
+            id="detect-video-btn"
+            class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors duration-200 hidden"
+          >
+            Start Detection
+          </button>
+          <button 
+            id="stop-video-detection-btn"
+            class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 hidden"
+          >
+            Stop Detection
+          </button>
         </div>
         <div id="video-error" class="hidden text-red-500 text-center"></div>
       </div>
@@ -57,7 +72,7 @@
   <!-- Image Mode -->
   <div id="image-mode" class="mode-container hidden">
     <div class="bg-gray-100 rounded-lg p-6">
-      <h2 class="text-2xl font-bold mb-4 text-center">Image Mode</h2>
+      <h2 class="text-2xl font-bold mb-4 text-center">Image Mode with Object Detection</h2>
       <div class="flex flex-col items-center space-y-4">
         <!-- File Upload Area -->
         <div 
@@ -80,97 +95,135 @@
           class="hidden"
         >
 
-        <!-- Image Display -->
+        <!-- Image Display with Detection Container -->
         <div id="image-display" class="hidden w-full">
           <div class="flex flex-col items-center space-y-4">
-            <img 
-              id="uploaded-image" 
-              alt="Uploaded image"
-              class="max-w-full h-auto rounded-lg shadow-lg"
-              style="max-height: 400px;"
-            >
-            <button 
-              id="clear-image-btn"
-              class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
-            >
-              Clear Image
-            </button>
+            <div id="image-container" class="relative inline-block">
+              <img 
+                id="uploaded-image" 
+                alt="Uploaded image"
+                class="max-w-full h-auto rounded-lg shadow-lg"
+                style="max-height: 400px;"
+              >
+            </div>
+            <div class="flex space-x-4">
+              <button 
+                id="clear-image-btn"
+                class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
+              >
+                Clear Image
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Object Detection Overlay -->
+  <ObjectDetectionOverlay showControls={true} showStats={true} />
 </div>
 
 <script>
-// @ts-nocheck
 class MediaViewer {
+  private currentStream: MediaStream | null = null;
+  private videoDetectionActive = false;
+  private stopVideoDetection: (() => void) | null = null;
+
+  // Video elements
+  private videoModeBtn: HTMLButtonElement | null = null;
+  private imageModeBtn: HTMLButtonElement | null = null;
+  private videoMode: HTMLElement | null = null;
+  private imageMode: HTMLElement | null = null;
+  private cameraVideo: HTMLVideoElement | null = null;
+  private videoContainer: HTMLElement | null = null;
+  private startCameraBtn: HTMLButtonElement | null = null;
+  private stopCameraBtn: HTMLButtonElement | null = null;
+  private detectVideoBtn: HTMLButtonElement | null = null;
+  private stopVideoDetectionBtn: HTMLButtonElement | null = null;
+  private videoError: HTMLElement | null = null;
+
+  // Image elements
+  private uploadArea: HTMLElement | null = null;
+  private imageInput: HTMLInputElement | null = null;
+  private imageDisplay: HTMLElement | null = null;
+  private imageContainer: HTMLElement | null = null;
+  private uploadedImage: HTMLImageElement | null = null;
+  private clearImageBtn: HTMLButtonElement | null = null;
+
   constructor() {
-    this.currentStream = null;
     this.initializeElements();
     this.bindEvents();
   }
 
   initializeElements() {
-    this.videoModeBtn = document.getElementById('video-mode-btn');
-    this.imageModeBtn = document.getElementById('image-mode-btn');
+    this.videoModeBtn = document.getElementById('video-mode-btn') as HTMLButtonElement;
+    this.imageModeBtn = document.getElementById('image-mode-btn') as HTMLButtonElement;
     this.videoMode = document.getElementById('video-mode');
     this.imageMode = document.getElementById('image-mode');
-    this.cameraVideo = document.getElementById('camera-video');
-    this.startCameraBtn = document.getElementById('start-camera-btn');
-    this.stopCameraBtn = document.getElementById('stop-camera-btn');
+    this.cameraVideo = document.getElementById('camera-video') as HTMLVideoElement;
+    this.videoContainer = document.getElementById('video-container');
+    this.startCameraBtn = document.getElementById('start-camera-btn') as HTMLButtonElement;
+    this.stopCameraBtn = document.getElementById('stop-camera-btn') as HTMLButtonElement;
+    this.detectVideoBtn = document.getElementById('detect-video-btn') as HTMLButtonElement;
+    this.stopVideoDetectionBtn = document.getElementById('stop-video-detection-btn') as HTMLButtonElement;
     this.videoError = document.getElementById('video-error');
     this.uploadArea = document.getElementById('upload-area');
-    this.imageInput = document.getElementById('image-input');
+    this.imageInput = document.getElementById('image-input') as HTMLInputElement;
     this.imageDisplay = document.getElementById('image-display');
-    this.uploadedImage = document.getElementById('uploaded-image');
-    this.clearImageBtn = document.getElementById('clear-image-btn');
+    this.imageContainer = document.getElementById('image-container');
+    this.uploadedImage = document.getElementById('uploaded-image') as HTMLImageElement;
+    this.clearImageBtn = document.getElementById('clear-image-btn') as HTMLButtonElement;
   }
 
   bindEvents() {
     // Mode switching
-    this.videoModeBtn.addEventListener('click', () => this.switchToVideoMode());
-    this.imageModeBtn.addEventListener('click', () => this.switchToImageMode());
+    this.videoModeBtn?.addEventListener('click', () => this.switchToVideoMode());
+    this.imageModeBtn?.addEventListener('click', () => this.switchToImageMode());
 
     // Video controls
-    this.startCameraBtn.addEventListener('click', () => this.startCamera());
-    this.stopCameraBtn.addEventListener('click', () => this.stopCamera());
+    this.startCameraBtn?.addEventListener('click', () => this.startCamera());
+    this.stopCameraBtn?.addEventListener('click', () => this.stopCamera());
+    this.detectVideoBtn?.addEventListener('click', () => this.startVideoObjectDetection());
+    this.stopVideoDetectionBtn?.addEventListener('click', () => this.stopVideoObjectDetection());
 
     // Image upload
-    this.uploadArea.addEventListener('click', () => this.imageInput.click());
-    this.uploadArea.addEventListener('dragover', (e) => this.handleDragOver(e));
-    this.uploadArea.addEventListener('drop', (e) => this.handleDrop(e));
-    this.imageInput.addEventListener('change', (e) => this.handleImageSelect(e));
-    this.clearImageBtn.addEventListener('click', () => this.clearImage());
+    this.uploadArea?.addEventListener('click', () => this.imageInput?.click());
+    this.uploadArea?.addEventListener('dragover', (e) => this.handleDragOver(e));
+    this.uploadArea?.addEventListener('drop', (e) => this.handleDrop(e));
+    this.imageInput?.addEventListener('change', (e) => this.handleImageSelect(e));
+    this.clearImageBtn?.addEventListener('click', () => this.clearImage());
   }
 
   switchToVideoMode() {
-    this.videoModeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-    this.videoModeBtn.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
-    this.imageModeBtn.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600');
-    this.imageModeBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+    this.videoModeBtn?.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+    this.videoModeBtn?.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
+    this.imageModeBtn?.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600');
+    this.imageModeBtn?.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
     
-    this.videoMode.classList.remove('hidden');
-    this.imageMode.classList.add('hidden');
+    this.videoMode?.classList.remove('hidden');
+    this.imageMode?.classList.add('hidden');
     
     this.stopCamera(); // Stop camera when switching away
+    this.stopVideoObjectDetection();
   }
 
   switchToImageMode() {
-    this.imageModeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-    this.imageModeBtn.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
-    this.videoModeBtn.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600');
-    this.videoModeBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+    this.imageModeBtn?.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+    this.imageModeBtn?.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
+    this.videoModeBtn?.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600');
+    this.videoModeBtn?.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
     
-    this.imageMode.classList.remove('hidden');
-    this.videoMode.classList.add('hidden');
+    this.imageMode?.classList.remove('hidden');
+    this.videoMode?.classList.add('hidden');
     
     this.stopCamera(); // Stop camera when switching away
+    this.stopVideoObjectDetection();
   }
 
   async startCamera() {
     try {
-      this.videoError.classList.add('hidden');
+      this.videoError?.classList.add('hidden');
       this.currentStream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           width: { ideal: 1280 },
@@ -179,9 +232,20 @@ class MediaViewer {
         audio: false 
       });
       
-      this.cameraVideo.srcObject = this.currentStream;
-      this.startCameraBtn.classList.add('hidden');
-      this.stopCameraBtn.classList.remove('hidden');
+      if (this.cameraVideo) {
+        this.cameraVideo.srcObject = this.currentStream;
+      }
+      this.startCameraBtn?.classList.add('hidden');
+      this.stopCameraBtn?.classList.remove('hidden');
+      this.detectVideoBtn?.classList.remove('hidden');
+      
+      // Wait for video to be ready before setting up detection
+      this.cameraVideo?.addEventListener('loadedmetadata', () => {
+        if (window.detectionOverlay && this.cameraVideo && this.videoContainer) {
+          window.detectionOverlay.setMediaElement(this.cameraVideo, this.videoContainer);
+        }
+      });
+      
     } catch (error) {
       console.error('Error accessing camera:', error);
       this.showVideoError('Unable to access camera. Please make sure you have given permission.');
@@ -192,43 +256,96 @@ class MediaViewer {
     if (this.currentStream) {
       this.currentStream.getTracks().forEach(track => track.stop());
       this.currentStream = null;
-      this.cameraVideo.srcObject = null;
+      if (this.cameraVideo) {
+        this.cameraVideo.srcObject = null;
+      }
     }
-    this.startCameraBtn.classList.remove('hidden');
-    this.stopCameraBtn.classList.add('hidden');
+    this.startCameraBtn?.classList.remove('hidden');
+    this.stopCameraBtn?.classList.add('hidden');
+    this.detectVideoBtn?.classList.add('hidden');
+    this.stopVideoObjectDetection();
   }
 
-  showVideoError(message) {
-    this.videoError.textContent = message;
-    this.videoError.classList.remove('hidden');
+  startVideoObjectDetection() {
+    if (!this.currentStream || !window.detectionOverlay || !window.detectionOverlay.isReady()) {
+      this.showVideoError('Camera not ready or object detection model not loaded');
+      return;
+    }
+
+    if (!this.cameraVideo || !this.videoContainer) {
+      this.showVideoError('Video elements not ready');
+      return;
+    }
+
+    this.videoDetectionActive = true;
+    this.detectVideoBtn?.classList.add('hidden');
+    this.stopVideoDetectionBtn?.classList.remove('hidden');
+
+    // Start continuous detection on video stream
+    this.stopVideoDetection = window.detectionOverlay.getDetector().startVideoDetection(
+      this.cameraVideo,
+      this.videoContainer,
+      (result: any) => {
+        // Optional: Handle detection results for video
+        console.log('Video detection result:', result);
+      },
+      5 // 5 FPS for better performance
+    );
   }
 
-  handleDragOver(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    this.uploadArea.classList.add('border-blue-400', 'bg-blue-50');
-  }
-
-  handleDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    this.uploadArea.classList.remove('border-blue-400', 'bg-blue-50');
+  stopVideoObjectDetection() {
+    if (this.stopVideoDetection) {
+      this.stopVideoDetection();
+      this.stopVideoDetection = null;
+    }
     
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
+    this.videoDetectionActive = false;
+    this.detectVideoBtn?.classList.remove('hidden');
+    this.stopVideoDetectionBtn?.classList.add('hidden');
+    
+    // Clear any detection overlay
+    if (this.videoContainer) {
+      const overlay = this.videoContainer.querySelector('.detection-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+    }
+  }
+
+  showVideoError(message: string) {
+    if (this.videoError) {
+      this.videoError.textContent = message;
+      this.videoError.classList.remove('hidden');
+    }
+  }
+
+  handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.uploadArea?.classList.add('border-blue-400', 'bg-blue-50');
+  }
+
+  handleDrop(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.uploadArea?.classList.remove('border-blue-400', 'bg-blue-50');
+    
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
       const file = files[0];
       this.processImageFile(file);
     }
   }
 
-  handleImageSelect(e) {
-    const file = e.target.files[0];
+  handleImageSelect(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const file = target.files?.[0];
     if (file) {
       this.processImageFile(file);
     }
   }
 
-  processImageFile(file) {
+  processImageFile(file: File) {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file.');
       return;
@@ -241,20 +358,46 @@ class MediaViewer {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (e.target && e.target.result) {
-        this.uploadedImage.src = e.target.result;
-        this.uploadArea.classList.add('hidden');
-        this.imageDisplay.classList.remove('hidden');
+      if (e.target && e.target.result && this.uploadedImage) {
+        this.uploadedImage.src = e.target.result as string;
+        this.uploadArea?.classList.add('hidden');
+        this.imageDisplay?.classList.remove('hidden');
+        
+        // Set up object detection for the uploaded image
+        this.uploadedImage.onload = () => {
+          if (window.detectionOverlay && this.uploadedImage && this.imageContainer) {
+            window.detectionOverlay.setMediaElement(this.uploadedImage, this.imageContainer);
+          }
+        };
       }
     };
     reader.readAsDataURL(file);
   }
 
   clearImage() {
-    this.uploadedImage.src = '';
-    this.imageInput.value = '';
-    this.imageDisplay.classList.add('hidden');
-    this.uploadArea.classList.remove('hidden');
+    if (this.uploadedImage) {
+      this.uploadedImage.src = '';
+    }
+    if (this.imageInput) {
+      this.imageInput.value = '';
+    }
+    this.imageDisplay?.classList.add('hidden');
+    this.uploadArea?.classList.remove('hidden');
+    
+    // Clear any detection overlay
+    if (this.imageContainer) {
+      const overlay = this.imageContainer.querySelector('.detection-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+    }
+  }
+}
+
+// Declare global window extensions
+declare global {
+  interface Window {
+    detectionOverlay: any;
   }
 }
 
