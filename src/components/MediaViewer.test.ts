@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import MediaViewer from '../../components/MediaViewer.svelte';
+import MediaViewer from './MediaViewer.svelte';
 
 // Mock the ObjectDetection class
 const mockInitialize = vi.fn(() => Promise.resolve());
@@ -12,7 +12,7 @@ const mockUpdateOptions = vi.fn();
 const mockDispose = vi.fn();
 const mockStartVideoDetection = vi.fn(() => () => {});
 
-vi.mock('../../lib/objectDetection.js', () => ({
+vi.mock('../lib/objectDetection.js', () => ({
   ObjectDetection: class {
     initialize = mockInitialize;
     processImage = mockProcessImage;

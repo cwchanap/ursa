@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import Button from '../../components/Button.svelte';
+import Button from './Button.svelte';
 
 // Mock canvas-confetti
 vi.mock('canvas-confetti', () => ({

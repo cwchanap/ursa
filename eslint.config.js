@@ -16,8 +16,6 @@ export default [
       '**/build/**',
       // Temporarily ignore Svelte files until eslint-plugin-svelte is configured
       'src/components/*.svelte',
-      // Ignore test files (they use bun:test which ESLint doesn't understand)
-      'src/tests/**',
     ],
   },
 
@@ -81,6 +79,45 @@ export default [
     files: ['*.config.js', '*.config.mjs', '*.config.ts'],
     rules: {
       'no-console': 'off',
+    },
+  },
+
+  // Test files (Vitest)
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        project: './tsconfig.json',
+      },
+      globals: {
+        // Vitest globals
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        vi: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        // DOM globals (happy-dom environment)
+        window: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        HTMLElement: 'readonly',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+    },
+    rules: {
+      ...tsPlugin.configs.recommended.rules,
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'no-undef': 'off', // TypeScript handles this
     },
   },
 ];
