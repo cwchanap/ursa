@@ -14,8 +14,8 @@ export default [
       '**/.astro/**',
       '**/coverage/**',
       '**/build/**',
-      // Temporarily ignore this file due to @ts-nocheck usage
-      'src/components/MediaViewer.astro',
+      // Temporarily ignore Svelte files until eslint-plugin-svelte is configured
+      'src/components/*.svelte',
     ],
   },
 
