@@ -16,6 +16,8 @@ export default [
       '**/build/**',
       // Temporarily ignore Svelte files until eslint-plugin-svelte is configured
       'src/components/*.svelte',
+      // Ignore test files (they use bun:test which ESLint doesn't understand)
+      'src/tests/**',
     ],
   },
 
