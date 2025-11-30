@@ -246,7 +246,7 @@
         </div>
 
         <div class="control-section">
-          <label class="control-label">
+          <label class="control-label" for="confidence-slider">
             <span class="label-text">Confidence Threshold</span>
             <span class="label-value">{confidenceValue}%</span>
           </label>
@@ -257,6 +257,7 @@
             max="95"
             bind:value={confidenceValue}
             class="cosmic-slider"
+            aria-label="Confidence Threshold"
           >
           <div class="slider-markers">
             <span>Low</span>
@@ -265,7 +266,7 @@
         </div>
 
         <div class="control-section">
-          <label class="control-label">
+          <label class="control-label" for="max-detections-slider">
             <span class="label-text">Max Detections</span>
             <span class="label-value">{maxDetectionsValue}</span>
           </label>
@@ -276,6 +277,7 @@
             max="50"
             bind:value={maxDetectionsValue}
             class="cosmic-slider"
+            aria-label="Max Detections"
           >
           <div class="slider-markers">
             <span>1</span>

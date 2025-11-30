@@ -54,71 +54,69 @@ describe('MediaViewer Component', () => {
     it('renders video mode button', async () => {
       render(MediaViewer);
       
-      const videoBtn = screen.getByText('📹 Video Mode');
+      const videoBtn = screen.getByText('Live Camera');
       expect(videoBtn).toBeInTheDocument();
     });
 
     it('renders image mode button', async () => {
       render(MediaViewer);
       
-      const imageBtn = screen.getByText('🖼️ Image Mode');
+      const imageBtn = screen.getByText('Image Upload');
       expect(imageBtn).toBeInTheDocument();
     });
 
     it('starts in video mode by default', async () => {
       render(MediaViewer);
       
-      expect(screen.getByText('Video Mode')).toBeInTheDocument();
-      expect(screen.getByText('Start Camera')).toBeInTheDocument();
+      expect(screen.getByText('Live Video Stream')).toBeInTheDocument();
+      expect(screen.getByText('Activate Camera')).toBeInTheDocument();
     });
 
     it('switches to image mode when image button is clicked', async () => {
       render(MediaViewer);
       
-      const imageBtn = screen.getByText('🖼️ Image Mode');
+      const imageBtn = screen.getByText('Image Upload');
       await fireEvent.click(imageBtn);
       
-      expect(screen.getByText('Image Mode with Object Detection')).toBeInTheDocument();
-      expect(screen.getByText(/Click to upload an image/i)).toBeInTheDocument();
+      expect(screen.getByText('Image Analysis')).toBeInTheDocument();
+      expect(screen.getByText(/Drop your image here/i)).toBeInTheDocument();
     });
 
     it('switches back to video mode when video button is clicked', async () => {
       render(MediaViewer);
       
       // Switch to image mode first
-      const imageBtn = screen.getByText('🖼️ Image Mode');
+      const imageBtn = screen.getByText('Image Upload');
       await fireEvent.click(imageBtn);
       
       // Switch back to video mode
-      const videoBtn = screen.getByText('📹 Video Mode');
+      const videoBtn = screen.getByText('Live Camera');
       await fireEvent.click(videoBtn);
       
-      expect(screen.getByText('Video Mode')).toBeInTheDocument();
-      expect(screen.getByText('Start Camera')).toBeInTheDocument();
+      expect(screen.getByText('Live Video Stream')).toBeInTheDocument();
+      expect(screen.getByText('Activate Camera')).toBeInTheDocument();
     });
 
     it('applies active styling to video mode button by default', async () => {
       render(MediaViewer);
       
-      const videoBtn = screen.getByText('📹 Video Mode');
-      expect(videoBtn).toHaveClass('bg-blue-500');
-      expect(videoBtn).toHaveClass('text-white');
+      const videoBtn = screen.getByText('Live Camera');
+      expect(videoBtn.closest('button')).toHaveClass('active');
     });
 
     it('applies inactive styling to image mode button by default', async () => {
       render(MediaViewer);
       
-      const imageBtn = screen.getByText('🖼️ Image Mode');
-      expect(imageBtn).toHaveClass('bg-gray-200');
-      expect(imageBtn).toHaveClass('text-gray-700');
+      const imageBtn = screen.getByText('Image Upload');
+      expect(imageBtn.closest('button')).not.toHaveClass('active');
     });
   });
 
   describe('Video Mode', () => {
-    it('shows Start Camera button initially', async () => {
+    it('shows Activate Camera button initially', async () => {
       render(MediaViewer);
       
-      expect(screen.getByText('Start Camera')).toBeInTheDocument();
+      expect(screen.getByText('Activate Camera')).toBeInTheDocument();
     });
 
     it('renders video element', async () => {
@@ -149,17 +147,17 @@ describe('MediaViewer Component', () => {
     it('shows upload area when in image mode', async () => {
       render(MediaViewer);
       
-      const imageBtn = screen.getByText('🖼️ Image Mode');
+      const imageBtn = screen.getByText('Image Upload');
       await fireEvent.click(imageBtn);
       
-      expect(screen.getByText(/Click to upload an image/i)).toBeInTheDocument();
-      expect(screen.getByText(/PNG, JPG, GIF up to 10MB/i)).toBeInTheDocument();
+      expect(screen.getByText(/Drop your image here/i)).toBeInTheDocument();
+      expect(screen.getByText(/or click to browse/i)).toBeInTheDocument();
     });
 
     it('has a hidden file input for image upload', async () => {
       const { container } = render(MediaViewer);
       
-      const imageBtn = screen.getByText('🖼️ Image Mode');
+      const imageBtn = screen.getByText('Image Upload');
       await fireEvent.click(imageBtn);
       
       const fileInput = container.querySelector('input[type="file"]');
@@ -171,30 +169,28 @@ describe('MediaViewer Component', () => {
     it('applies drag over styling when dragging file', async () => {
       render(MediaViewer);
       
-      const imageBtn = screen.getByText('🖼️ Image Mode');
+      const imageBtn = screen.getByText('Image Upload');
       await fireEvent.click(imageBtn);
       
-      const uploadArea = screen.getByText(/Click to upload an image/i).closest('button');
+      const uploadArea = screen.getByText(/Drop your image here/i).closest('button');
       expect(uploadArea).toBeInTheDocument();
       
       await fireEvent.dragOver(uploadArea!);
-      expect(uploadArea).toHaveClass('border-blue-400');
-      expect(uploadArea).toHaveClass('bg-blue-50');
+      expect(uploadArea).toHaveClass('drag-active');
     });
 
     it('removes drag styling on drag leave', async () => {
       render(MediaViewer);
       
-      const imageBtn = screen.getByText('🖼️ Image Mode');
+      const imageBtn = screen.getByText('Image Upload');
       await fireEvent.click(imageBtn);
       
-      const uploadArea = screen.getByText(/Click to upload an image/i).closest('button');
+      const uploadArea = screen.getByText(/Drop your image here/i).closest('button');
       
       await fireEvent.dragOver(uploadArea!);
       await fireEvent.dragLeave(uploadArea!);
       
-      expect(uploadArea).not.toHaveClass('border-blue-400');
-      expect(uploadArea).not.toHaveClass('bg-blue-50');
+      expect(uploadArea).not.toHaveClass('drag-active');
     });
   });
 
@@ -202,14 +198,15 @@ describe('MediaViewer Component', () => {
     it('includes ObjectDetectionOverlay component', async () => {
       render(MediaViewer);
       
-      // The overlay should render its controls
-      expect(screen.getByText('Object Detection')).toBeInTheDocument();
+      // The overlay should render its settings toggle button
+      expect(screen.getByLabelText('Toggle detection settings')).toBeInTheDocument();
     });
 
     it('shows detection controls from overlay', async () => {
       render(MediaViewer);
       
-      expect(screen.getByText('Detect Objects')).toBeInTheDocument();
+      expect(screen.getByText('Detection Settings')).toBeInTheDocument();
+      expect(screen.getByText('Analyze Frame')).toBeInTheDocument();
       expect(screen.getByText('Clear')).toBeInTheDocument();
     });
   });
