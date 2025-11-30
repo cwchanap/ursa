@@ -13,7 +13,7 @@ Ursa is an Astro-based web application that combines AI object detection with mo
 ### Tech Stack Specifics
 
 - **Astro 5.14.1** with TypeScript and Tailwind CSS 4.x
-- **TensorFlow.js 4.22.0** with WebGL backend via CDN (not npm imports)
+- **TensorFlow.js 4.22.0** with WebGL backend via npm packages
 - **COCO-SSD model** for 80-class object detection
 - **Bun** as package manager and runtime
 
@@ -22,9 +22,10 @@ Ursa is an Astro-based web application that combines AI object detection with mo
 ### TensorFlow.js Integration
 
 ```typescript
-// IMPORTANT: Uses CDN loading, not npm imports
-declare const tf: any;
-declare const cocoSsd: any;
+// Uses npm imports with dynamic loading to avoid SSR issues
+import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
+import * as cocoSsd from '@tensorflow-models/coco-ssd';
 
 // Model initialization pattern
 await tf.setBackend('webgl');

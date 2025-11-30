@@ -271,6 +271,7 @@
         <div class="media-content">
           <div id="video-container" bind:this={videoContainer} class="video-wrapper">
             <!-- svelte-ignore a11y_media_has_caption -->
+            <!-- Captions not applicable: This is a live camera feed for real-time object detection, not pre-recorded media content -->
             <video
               bind:this={cameraVideo}
               autoplay

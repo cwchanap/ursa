@@ -19,7 +19,7 @@
   let maxDetectionsValue = 20;
   let showLabels = true;
   let showScores = true;
-  let isMenuOpen = false;
+  let isSettingsPanelOpen = false;
 
   // Stats State
   let objectsCount: string = '-';
@@ -156,11 +156,11 @@
   }
 
   function toggleMenu(): void {
-    isMenuOpen = !isMenuOpen;
+    isSettingsPanelOpen = !isSettingsPanelOpen;
   }
 
   function closeMenu(): void {
-    isMenuOpen = false;
+    isSettingsPanelOpen = false;
   }
 
   // Reactive updates for detector options
@@ -177,7 +177,7 @@
       class="menu-toggle"
       aria-label="Toggle detection settings"
     >
-      <div class="menu-icon {isMenuOpen ? 'open' : ''}">
+      <div class="menu-icon {isSettingsPanelOpen ? 'open' : ''}">
         <span></span>
         <span></span>
         <span></span>
@@ -186,7 +186,7 @@
     </button>
 
     <!-- Backdrop -->
-    {#if isMenuOpen}
+    {#if isSettingsPanelOpen}
       <button
         class="menu-backdrop"
         onclick={closeMenu}
@@ -195,7 +195,7 @@
     {/if}
 
     <!-- Slide-out Menu Panel -->
-    <div id="detection-controls" class="detection-controls {isMenuOpen ? 'open' : ''}">
+    <div id="detection-controls" class="detection-controls {isSettingsPanelOpen ? 'open' : ''}">
       <div class="controls-header">
         <div class="header-glow"></div>
         <div class="header-content">
