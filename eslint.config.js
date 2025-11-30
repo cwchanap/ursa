@@ -32,6 +32,24 @@ export default [
         sourceType: 'module',
         project: './tsconfig.json',
       },
+      globals: {
+        // Browser globals
+        console: 'readonly',
+        window: 'readonly',
+        document: 'readonly',
+        performance: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        navigator: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLVideoElement: 'readonly',
+        HTMLImageElement: 'readonly',
+        HTMLCanvasElement: 'readonly',
+        CanvasRenderingContext2D: 'readonly',
+        MediaStream: 'readonly',
+        MediaStreamTrack: 'readonly',
+        Image: 'readonly',
+      },
     },
     plugins: {
       '@typescript-eslint': tsPlugin,
@@ -42,6 +60,7 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
+      'no-undef': 'off', // TypeScript handles this
     },
   },
 

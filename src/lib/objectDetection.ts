@@ -1,20 +1,7 @@
-// Use global TensorFlow.js objects loaded via CDN
-// import * as tf from '@tensorflow/tfjs';
-// import '@tensorflow/tfjs-backend-webgl';
-// import * as cocoSsd from '@tensorflow-models/coco-ssd';
-
-// Declare global browser APIs and TensorFlow.js to avoid TypeScript errors
-declare const console: Console;
-declare const performance: Performance;
-declare const document: Document;
-declare const window: Window;
-declare const setTimeout: (callback: () => void, ms: number) => number;
-
-// Declare global TensorFlow.js objects (loaded via CDN)
-/* eslint-disable @typescript-eslint/no-explicit-any */
-declare const tf: any;
-declare const cocoSsd: any;
-/* eslint-enable @typescript-eslint/no-explicit-any */
+// TensorFlow.js imports via npm packages
+import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
+import * as cocoSsd from '@tensorflow-models/coco-ssd';
 
 export interface DetectedObject {
   bbox: [number, number, number, number]; // [x, y, width, height]
