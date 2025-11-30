@@ -389,4 +389,33 @@ import MediaViewer from '../components/MediaViewer.svelte';
 			gap: 1rem;
 		}
 	}
+
+	/* Accessibility: Reduced Motion */
+	@media (prefers-reduced-motion: reduce) {
+		.stars-layer,
+		.stars-small,
+		.stars-medium,
+		.stars-large,
+		.gradient-mesh,
+		.logo-glow,
+		.logo-ursa,
+		.logo-dot,
+		.hero-header,
+		.tagline-accent,
+		.tagline-text,
+		.hero-subtitle,
+		.page-footer {
+			animation: none !important;
+			transition: none !important;
+		}
+
+		.footer-stat {
+			animation: none !important;
+			transition: background 0.01s, border-color 0.01s, box-shadow 0.01s !important;
+		}
+
+		.footer-stat:hover {
+			transform: none !important;
+		}
+	}
 </style>

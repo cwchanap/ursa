@@ -41,8 +41,8 @@ describe('ObjectDetectionOverlay Component', () => {
         props: { showControls: true, showStats: false },
       });
       
-      expect(screen.getByText('Object Detection')).toBeInTheDocument();
-      expect(screen.getByText('Detect Objects')).toBeInTheDocument();
+      expect(screen.getByText('Detection Settings')).toBeInTheDocument();
+      expect(screen.getByText('Analyze Frame')).toBeInTheDocument();
       expect(screen.getByText('Clear')).toBeInTheDocument();
     });
 
@@ -51,7 +51,7 @@ describe('ObjectDetectionOverlay Component', () => {
         props: { showControls: false, showStats: false },
       });
       
-      expect(screen.queryByText('Object Detection')).not.toBeInTheDocument();
+      expect(screen.queryByText('Detection Settings')).not.toBeInTheDocument();
     });
 
     it('renders confidence slider with default value', async () => {
@@ -104,7 +104,7 @@ describe('ObjectDetectionOverlay Component', () => {
       const slider = screen.getByLabelText(/Confidence Threshold/i);
       await fireEvent.input(slider, { target: { value: '75' } });
       
-      expect(screen.getByText('75')).toBeInTheDocument();
+      expect(screen.getByText('75%')).toBeInTheDocument();
     });
 
     it('updates max detections value when slider changes', async () => {
