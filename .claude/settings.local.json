@@ -1,6 +1,6 @@
 {
   "permissions": {
-    "allow": ["Bash(bun run lint:*)"],
+    "allow": ["Bash(bun run lint:*)", "Skill(frontend-design:frontend-design)"],
     "deny": [],
     "ask": []
   }
