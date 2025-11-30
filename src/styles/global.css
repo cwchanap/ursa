@@ -42,6 +42,15 @@
 }
 
 :root {
+  /* Cosmic theme colors */
+  --cosmic-dark: #0a0e27;
+  --cosmic-deep: #151b3d;
+  --cosmic-blue: #1e3a8a;
+  --cosmic-cyan: #06b6d4;
+  --cosmic-purple: #8b5cf6;
+  --cosmic-pink: #ec4899;
+  --cosmic-gold: #fbbf24;
+
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.13 0.028 261.692);

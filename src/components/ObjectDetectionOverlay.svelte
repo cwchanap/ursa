@@ -372,13 +372,6 @@
 </div>
 
 <style>
-:root {
-  --cosmic-cyan: #06b6d4;
-  --cosmic-purple: #8b5cf6;
-  --cosmic-pink: #ec4899;
-  --cosmic-gold: #fbbf24;
-}
-
 .object-detection-overlay {
   position: relative;
 }
