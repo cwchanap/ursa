@@ -193,14 +193,14 @@ describe('MediaViewer Component', () => {
       expect(uploadArea).not.toHaveClass('drag-active');
     });
 
-    it('shows Upload Different button when image is displayed', async () => {
+    it('shows file input for image upload', async () => {
       const { container } = render(MediaViewer);
       
       const imageBtn = screen.getByText('Image Upload');
       await fireEvent.click(imageBtn);
       
-      // Simulate file upload by setting showImageDisplay state
-      // Note: Full upload flow requires mocking FileReader
+      // Verify file input is available for image upload
+      // Note: Testing "Upload Different" button requires mocking FileReader for full upload flow
       const fileInput = container.querySelector('input[type="file"]');
       expect(fileInput).toBeInTheDocument();
     });

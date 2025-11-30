@@ -63,7 +63,8 @@
       hideLoading();
     } catch (error) {
       console.error('Failed to initialize object detection:', error);
-      showError(`Failed to initialize object detection: ${error}`);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      showError(`Failed to initialize object detection: ${errorMsg}`);
       modelStatus = 'Error';
       modelStatusClass = 'font-medium text-red-600';
       hideLoading();
