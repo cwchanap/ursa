@@ -231,8 +231,9 @@
       <button
         onclick={switchToVideoMode}
         class="mode-btn {currentMode === 'video' ? 'active' : ''}"
+        aria-label="Live Camera"
       >
-        <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
           <rect x="2" y="7" width="20" height="14" rx="2" stroke-width="2"/>
           <circle cx="8" cy="14" r="2" fill="currentColor"/>
         </svg>
@@ -241,8 +242,9 @@
       <button
         onclick={switchToImageMode}
         class="mode-btn {currentMode === 'image' ? 'active' : ''}"
+        aria-label="Image Upload"
       >
-        <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
           <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/>
           <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
           <path d="M21 15l-5-5L5 21" stroke-width="2"/>
@@ -450,13 +452,6 @@
 </div>
 
 <style>
-:root {
-  --cosmic-cyan: #06b6d4;
-  --cosmic-purple: #8b5cf6;
-  --cosmic-pink: #ec4899;
-  --cosmic-gold: #fbbf24;
-}
-
 .media-viewer-container {
   width: 100%;
   max-width: 1200px;
