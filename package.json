@@ -18,6 +18,7 @@
     "@astrojs/svelte": "^7.2.2",
     "@tailwindcss/vite": "^4.1.13",
     "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow-models/mobilenet": "^2.1.1",
     "@tensorflow/tfjs": "^4.22.0",
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
     "@types/canvas-confetti": "^1.9.0",
@@ -28,7 +29,8 @@
     "lucide-react": "^0.544.0",
     "svelte": "^5.45.2",
     "tailwind-merge": "^3.3.1",
-    "tailwindcss": "^4.1.13"
+    "tailwindcss": "^4.1.13",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
