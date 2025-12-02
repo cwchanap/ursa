@@ -25,9 +25,9 @@
 
 **Purpose**: Install dependencies and create type definitions for the feature
 
-- [ ] T001 Install @tensorflow-models/mobilenet package via `bun add @tensorflow-models/mobilenet`
-- [ ] T002 Install tesseract.js package via `bun add tesseract.js`
-- [ ] T003 [P] Create TypeScript type definitions in src/lib/types/analysis.ts based on contracts/analysis-api.ts
+- [x] T001 Install @tensorflow-models/mobilenet package via `bun add @tensorflow-models/mobilenet`
+- [x] T002 Install tesseract.js package via `bun add tesseract.js`
+- [x] T003 [P] Create TypeScript type definitions in src/lib/types/analysis.ts based on contracts/analysis-api.ts
 - [ ] T004 [P] Add test image assets to public/test-images/ (beach-sunset.jpg, document-receipt.jpg)
 
 ---
@@ -38,9 +38,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create Svelte writable store for analysis state in src/lib/stores/analysisState.ts following Svelte store patterns (writable, derived). Export typed store with initial state and action functions (setActiveMode, setProcessingStatus, setResults, clearResults, setMediaElement, startVideoStream, stopVideoStream). Reference existing Svelte components for store subscription patterns.
-- [ ] T006 [P] Create custom error classes in src/lib/errors/analysisErrors.ts (AnalysisError, ModelLoadError, InferenceError, WorkerError)
-- [ ] T007 [P] Create utility functions in src/lib/utils/bboxUtils.ts for bounding box normalization/denormalization
+- [x] T005 Create Svelte writable store for analysis state in src/lib/stores/analysisState.ts following Svelte store patterns (writable, derived). Export typed store with initial state and action functions (setActiveMode, setProcessingStatus, setResults, clearResults, setMediaElement, startVideoStream, stopVideoStream). Reference existing Svelte components for store subscription patterns.
+- [x] T006 [P] Create custom error classes in src/lib/errors/analysisErrors.ts (AnalysisError, ModelLoadError, InferenceError, WorkerError)
+- [x] T007 [P] Create utility functions in src/lib/utils/bboxUtils.ts for bounding box normalization/denormalization
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -54,16 +54,16 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [P] [US1] Implement ImageClassification service class in src/lib/imageClassification.ts with initialize(), classify(), getStatus(), isReady(), and dispose() methods using @tensorflow-models/mobilenet
-- [ ] T009 [P] [US1] Create ClassificationResults component in src/components/ClassificationResults.svelte to display top-5 predictions with labels and confidence percentages
-- [ ] T010 [US1] Integrate classification into MediaViewer by modifying src/components/MediaViewer.svelte to add "Classify" button that calls imageClassification.classify() and updates analysisState
+- [x] T008 [P] [US1] Implement ImageClassification service class in src/lib/imageClassification.ts with initialize(), classify(), getStatus(), isReady(), and dispose() methods using @tensorflow-models/mobilenet
+- [x] T009 [P] [US1] Create ClassificationResults component in src/components/ClassificationResults.svelte to display top-5 predictions with labels and confidence percentages
+- [x] T010 [US1] Integrate classification into MediaViewer by modifying src/components/MediaViewer.svelte to add "Classify" button that calls imageClassification.classify() and updates analysisState
   - ⚠️ **File conflict note**: T019 and T030 also modify this file. Complete T010 first, then T019, then T030 to avoid merge conflicts.
-- [ ] T011 [US1] Add loading state UI in ClassificationResults.svelte showing spinner when processing.classification.status === 'loading' or 'processing'
-- [ ] T012 [US1] Add error handling in ClassificationResults.svelte to display user-friendly error messages when processing.classification.status === 'error'
-- [ ] T013 [US1] Implement result clearing in imageClassification.ts when new image loaded (FR-010 compliance)
-- [ ] T014 [US1] Add real-time classification for video streams in src/lib/imageClassification.ts with FPS throttling (5-10 FPS using setInterval)
-- [ ] T015 [US1] Add performance measurement using Performance Marks API in imageClassification.ts to track inference time and display in dev mode
-- [ ] T016 [US1] Implement dispose() method in ImageClassification class to clean up MobileNetV2 model memory (call model.dispose())
+- [x] T011 [US1] Add loading state UI in ClassificationResults.svelte showing spinner when processing.classification.status === 'loading' or 'processing'
+- [x] T012 [US1] Add error handling in ClassificationResults.svelte to display user-friendly error messages when processing.classification.status === 'error'
+- [x] T013 [US1] Implement result clearing in imageClassification.ts when new image loaded (FR-010 compliance)
+- [x] T014 [US1] Add real-time classification for video streams in src/lib/imageClassification.ts with FPS throttling (5-10 FPS using setInterval)
+- [x] T015 [US1] Add performance measurement using Performance Marks API in imageClassification.ts to track inference time and display in dev mode
+- [x] T016 [US1] Implement dispose() method in ImageClassification class to clean up MobileNetV2 model memory (call model.dispose())
 
 **Checkpoint**: At this point, image classification should be fully functional - users can classify static images and video streams with top-5 results
 
@@ -77,19 +77,19 @@
 
 ### Implementation for User Story 2
 
-- [ ] T017 [P] [US2] Implement OCRExtraction service class in src/lib/ocrExtraction.ts with initialize(), extractText(), getStatus(), isReady(), loadLanguage(), and dispose() methods using tesseract.js
-- [ ] T018 [P] [US2] Create OCRResults component in src/components/OCRResults.svelte to display extracted text with selectable/copyable text area and copy-to-clipboard button
-- [ ] T019 [US2] Integrate OCR into MediaViewer by modifying src/components/MediaViewer.svelte to add "Extract Text" button that calls ocrExtraction.extractText() and updates analysisState
+- [x] T017 [P] [US2] Implement OCRExtraction service class in src/lib/ocrExtraction.ts with initialize(), extractText(), getStatus(), isReady(), loadLanguage(), and dispose() methods using tesseract.js
+- [x] T018 [P] [US2] Create OCRResults component in src/components/OCRResults.svelte to display extracted text with selectable/copyable text area and copy-to-clipboard button
+- [x] T019 [US2] Integrate OCR into MediaViewer by modifying src/components/MediaViewer.svelte to add "Extract Text" button that calls ocrExtraction.extractText() and updates analysisState
   - ⚠️ **Depends on**: T010 (MediaViewer classification integration must be committed first)
-- [ ] T020 [US2] Implement text region sorting by reading order in ocrExtraction.ts (top-to-bottom via bbox.y, then left-to-right via bbox.x per FR-011)
-- [ ] T021 [US2] Add loading state UI in OCRResults.svelte showing progress indicator during Tesseract worker initialization and text recognition
-- [ ] T022 [US2] Add error handling in OCRResults.svelte for "No text found" case and worker initialization failures with user-friendly messages
-- [ ] T023 [US2] Implement copy-to-clipboard functionality in OCRResults.svelte using navigator.clipboard.writeText() with success feedback (FR-012 compliance)
-- [ ] T024 [US2] Create dedicated OCR canvas overlay in src/components/OCROverlay.svelte with green bounding boxes (#10B981) and hover tooltip showing extracted text. Reuse bboxUtils.ts for coordinate normalization but keep tooltip logic separate from ObjectDetectionOverlay to avoid coupling detection and OCR behaviors.
-- [ ] T025 [US2] Add real-time OCR for video streams in src/lib/ocrExtraction.ts with FPS throttling (5-10 FPS) and bounding box rendering on canvas
-- [ ] T026 [US2] Implement OCR result clearing when new image loaded or mode changed (FR-010 compliance)
-- [ ] T027 [US2] Add language pack loading UI in OCRResults.svelte with dropdown selector for common languages (English default, Spanish, French optional)
-- [ ] T028 [US2] Implement dispose() method in OCRExtraction class to terminate Tesseract worker (await worker.terminate())
+- [x] T020 [US2] Implement text region sorting by reading order in ocrExtraction.ts (top-to-bottom via bbox.y, then left-to-right via bbox.x per FR-011)
+- [x] T021 [US2] Add loading state UI in OCRResults.svelte showing progress indicator during Tesseract worker initialization and text recognition
+- [x] T022 [US2] Add error handling in OCRResults.svelte for "No text found" case and worker initialization failures with user-friendly messages
+- [x] T023 [US2] Implement copy-to-clipboard functionality in OCRResults.svelte using navigator.clipboard.writeText() with success feedback (FR-012 compliance)
+- [x] T024 [US2] Create dedicated OCR canvas overlay in src/components/OCROverlay.svelte with green bounding boxes (#10B981) and hover tooltip showing extracted text. Reuse bboxUtils.ts for coordinate normalization but keep tooltip logic separate from ObjectDetectionOverlay to avoid coupling detection and OCR behaviors.
+- [x] T025 [US2] Add real-time OCR for video streams in src/lib/ocrExtraction.ts with FPS throttling (5-10 FPS) and bounding box rendering on canvas
+- [x] T026 [US2] Implement OCR result clearing when new image loaded or mode changed (FR-010 compliance)
+- [x] T027 [US2] Add language pack loading UI in OCRResults.svelte with dropdown selector for common languages (English default, Spanish, French optional)
+- [x] T028 [US2] Implement dispose() method in OCRExtraction class to terminate Tesseract worker (await worker.terminate())
 
 **Checkpoint**: At this point, OCR should be fully functional - users can extract text from images, copy results, and see bounding boxes on video
 
@@ -103,16 +103,16 @@
 
 ### Implementation for User Story 3
 
-- [ ] T029 [P] [US3] Create AnalysisModeTabs component in src/components/AnalysisModeTabs.svelte with three tabs (Detection, Classification, OCR) using Tailwind CSS tab styling with active/inactive states
-- [ ] T030 [US3] Integrate AnalysisModeTabs into MediaViewer by modifying src/components/MediaViewer.svelte to display tabs below media element and show/hide result components based on activeMode from analysisState
+- [x] T029 [P] [US3] Create AnalysisModeTabs component in src/components/AnalysisModeTabs.svelte with three tabs (Detection, Classification, OCR) using Tailwind CSS tab styling with active/inactive states
+- [x] T030 [US3] Integrate AnalysisModeTabs into MediaViewer by modifying src/components/MediaViewer.svelte to display tabs below media element and show/hide result components based on activeMode from analysisState
   - ⚠️ **Depends on**: T010, T019 (all button integrations must be complete before tabs integration)
-- [ ] T031 [US3] Implement tab switching logic in AnalysisModeTabs.svelte using click handlers that call setActiveMode() from analysisState and update aria-selected attributes for accessibility
-- [ ] T032 [US3] Add keyboard navigation to AnalysisModeTabs.svelte (Arrow keys to switch tabs, Tab key to focus content) following ARIA tabs pattern
-- [ ] T033 [US3] Modify MediaViewer.svelte to conditionally render ClassificationResults, OCRResults, or ObjectDetectionOverlay based on analysisState.activeMode
-- [ ] T034 [US3] Implement result persistence when switching tabs (do not clear results on tab switch, only on new image load per FR-010)
-- [ ] T035 [US3] Add visual indicators in AnalysisModeTabs.svelte showing which analyses have completed results (e.g., badge count or checkmark on tab)
-- [ ] T036 [US3] Test multiple analyses running concurrently on same image (classification + OCR) and verify results display correctly in separate tabs
-- [ ] T037 [US3] Ensure all three analysis modes (detection, classification, OCR) have consistent loading/error state UI across their respective result components
+- [x] T031 [US3] Implement tab switching logic in AnalysisModeTabs.svelte using click handlers that call setActiveMode() from analysisState and update aria-selected attributes for accessibility
+- [x] T032 [US3] Add keyboard navigation to AnalysisModeTabs.svelte (Arrow keys to switch tabs, Tab key to focus content) following ARIA tabs pattern
+- [x] T033 [US3] Modify MediaViewer.svelte to conditionally render ClassificationResults, OCRResults, or ObjectDetectionOverlay based on analysisState.activeMode
+- [x] T034 [US3] Implement result persistence when switching tabs (do not clear results on tab switch, only on new image load per FR-010)
+- [x] T035 [US3] Add visual indicators in AnalysisModeTabs.svelte showing which analyses have completed results (e.g., badge count or checkmark on tab)
+- [x] T036 [US3] Test multiple analyses running concurrently on same image (classification + OCR) and verify results display correctly in separate tabs
+- [x] T037 [US3] Ensure all three analysis modes (detection, classification, OCR) have consistent loading/error state UI across their respective result components
 
 **Checkpoint**: All user stories should now be independently functional - users can seamlessly switch between three analysis modes
 
@@ -122,17 +122,17 @@
 
 **Purpose**: Performance optimization, memory management, and final integration testing
 
-- [ ] T038 [P] Add performance monitoring dashboard in dev mode showing inference times with color-coded indicators (green <60ms, yellow 60-100ms, red >100ms) per research.md
-- [ ] T039 [P] Implement memory growth warnings using performance.memory API that log console warnings if growth exceeds 5MB/minute
+- [x] T038 [P] Add performance monitoring dashboard in dev mode showing inference times with color-coded indicators (green <60ms, yellow 60-100ms, red >100ms) per research.md
+- [x] T039 [P] Implement memory growth warnings using performance.memory API that log console warnings if growth exceeds 5MB/minute
 - [ ] T040 Add manual memory cleanup testing by creating test page at src/pages/memory-test.astro that cycles through all modes for 10 minutes while tracking heap usage
-- [ ] T041 Optimize canvas rendering in OCROverlay.svelte to use requestAnimationFrame for smooth video overlay updates
-- [ ] T042 [P] Add WebGL backend verification check in imageClassification.ts that logs warning if backend is not 'webgl' (graceful degradation per Constitution Principle II)
-- [ ] T043 [P] Add WebAssembly availability check in ocrExtraction.ts before initializing Tesseract worker with user-friendly error if unsupported
-- [ ] T044 Implement model preloading on page load in src/pages/index.astro to reduce time-to-first-classification by eagerly loading MobileNetV2 and Tesseract worker
-- [ ] T045 Add tooltip hover delay (200ms) for OCR bounding boxes to prevent tooltip flicker during mouse movement
+- [x] T041 Optimize canvas rendering in OCROverlay.svelte to use requestAnimationFrame for smooth video overlay updates
+- [x] T042 [P] Add WebGL backend verification check in imageClassification.ts that logs warning if backend is not 'webgl' (graceful degradation per Constitution Principle II)
+- [x] T043 [P] Add WebAssembly availability check in ocrExtraction.ts before initializing Tesseract worker with user-friendly error if unsupported
+- [x] T044 Implement model preloading on page load in src/pages/index.astro to reduce time-to-first-classification by eagerly loading MobileNetV2 and Tesseract worker
+- [x] T045 Add tooltip hover delay (200ms) for OCR bounding boxes to prevent tooltip flicker during mouse movement
 - [ ] T046 Test all edge cases from spec.md: no recognizable content, very large images (>2000px), unsupported OCR languages, blurry images, model load failures, mixed content
-- [ ] T047 Run linting via `bun run lint` and fix all errors and warnings
-- [ ] T048 Run production build via `bun run build` and verify bundle size increase is ~11MB (9MB MobileNetV2 + 2MB Tesseract)
+- [x] T047 Run linting via `bun run lint` and fix all errors and warnings
+- [x] T048 Run production build via `bun run build` and verify bundle size increase is ~11MB (9MB MobileNetV2 + 2MB Tesseract)
 - [ ] T049 Run manual browser tests in Chrome DevTools following quickstart.md testing guide for all three user stories
 - [ ] T050 Verify memory stability over 10-minute session using DevTools Memory panel (target: <50MB growth per Constitution Principle I)
 

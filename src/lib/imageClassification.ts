@@ -1,0 +1,265 @@
+/**
+ * Image Classification Service
+ *
+ * Wraps TensorFlow.js MobileNetV2 model for image classification.
+ * Returns top-5 predictions with confidence scores.
+ *
+ * @module lib/imageClassification
+ */
+
+import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
+import * as mobilenet from '@tensorflow-models/mobilenet';
+import type {
+  ClassificationAnalysis,
+  ClassificationResult,
+  ClassifyImageRequest,
+  ProcessingStatus,
+  IImageClassificationService,
+} from './types/analysis';
+import { ModelLoadError, InferenceError, WebGLError } from './errors/analysisErrors';
+
+export interface ClassificationOptions {
+  /** Number of top predictions to return (default: 5) */
+  topK?: number;
+  /** Minimum confidence threshold 0-1 (default: 0.01) */
+  minConfidence?: number;
+  /** Show performance timing in console (default: false in production) */
+  debug?: boolean;
+}
+
+export class ImageClassification implements IImageClassificationService {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private model: any = null;
+  private status: ProcessingStatus = 'idle';
+  private options: Required<ClassificationOptions>;
+
+  constructor(options: ClassificationOptions = {}) {
+    this.options = {
+      topK: options.topK ?? 5,
+      minConfidence: options.minConfidence ?? 0.01,
+      debug: options.debug ?? false,
+    };
+  }
+
+  /**
+   * Initialize TensorFlow.js and load the MobileNetV2 model
+   */
+  async initialize(): Promise<void> {
+    if (this.status === 'loading' || this.status === 'processing') {
+      return;
+    }
+
+    if (this.model) {
+      return; // Already initialized
+    }
+
+    this.status = 'loading';
+
+    try {
+      // Performance mark for model loading
+      performance.mark('mobilenet-load-start');
+
+      // Set TensorFlow.js backend
+      await tf.setBackend('webgl');
+      await tf.ready();
+
+      // Verify WebGL is available
+      const backend = tf.getBackend();
+      if (backend !== 'webgl') {
+        throw new WebGLError('classification');
+      }
+
+      // Load MobileNetV2 model (version 2, alpha 1.0 for best accuracy)
+      this.model = await mobilenet.load({
+        version: 2,
+        alpha: 1.0,
+      });
+
+      this.status = 'idle';
+
+      // Performance measurement
+      performance.mark('mobilenet-load-end');
+      performance.measure('mobilenet-load', 'mobilenet-load-start', 'mobilenet-load-end');
+
+      if (this.options.debug) {
+        const measure = performance.getEntriesByName('mobilenet-load')[0];
+        console.log(`MobileNetV2 loaded in ${measure.duration.toFixed(0)}ms`);
+      }
+    } catch (error) {
+      this.status = 'error';
+
+      if (error instanceof WebGLError) {
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      throw new ModelLoadError('classification', message);
+    }
+  }
+
+  /**
+   * Classify an image and return top-K predictions
+   */
+  async classify(request: ClassifyImageRequest): Promise<ClassificationAnalysis> {
+    const { imageElement, topK = this.options.topK } = request;
+
+    if (!this.model) {
+      // Auto-initialize if not already done
+      await this.initialize();
+    }
+
+    if (!this.model) {
+      throw new ModelLoadError('classification', 'Model failed to initialize');
+    }
+
+    this.status = 'processing';
+
+    try {
+      // Performance mark for inference
+      const startTime = performance.now();
+      performance.mark('classification-inference-start');
+
+      // Run classification
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const predictions: any[] = await this.model.classify(imageElement, topK);
+
+      const inferenceTime = performance.now() - startTime;
+
+      // Performance measurement
+      performance.mark('classification-inference-end');
+      performance.measure(
+        'classification-inference',
+        'classification-inference-start',
+        'classification-inference-end'
+      );
+
+      if (this.options.debug) {
+        const color = inferenceTime < 60 ? '\x1b[32m' : inferenceTime < 100 ? '\x1b[33m' : '\x1b[31m';
+        console.log(`${color}Classification inference: ${inferenceTime.toFixed(0)}ms\x1b[0m`);
+      }
+
+      // Transform predictions to our format
+      const results: ClassificationResult[] = predictions
+        .filter((p) => p.probability >= this.options.minConfidence)
+        .map((p) => ({
+          label: p.className,
+          confidence: p.probability,
+          classId: undefined, // MobileNet doesn't expose class IDs directly
+        }));
+
+      // Get image dimensions
+      const width =
+        imageElement instanceof HTMLVideoElement
+          ? imageElement.videoWidth
+          : imageElement.naturalWidth || imageElement.width;
+      const height =
+        imageElement instanceof HTMLVideoElement
+          ? imageElement.videoHeight
+          : imageElement.naturalHeight || imageElement.height;
+
+      this.status = 'complete';
+
+      return {
+        predictions: results,
+        inferenceTime,
+        timestamp: new Date().toISOString(),
+        imageDimensions: { width, height },
+      };
+    } catch (error) {
+      this.status = 'error';
+      const message = error instanceof Error ? error.message : String(error);
+      throw new InferenceError('classification', message);
+    }
+  }
+
+  /**
+   * Start continuous classification on a video stream
+   *
+   * @param videoElement - Video element to classify
+   * @param onResult - Callback for each classification result
+   * @param fps - Target frames per second (default: 5)
+   * @returns Stop function to end continuous classification
+   */
+  startVideoClassification(
+    videoElement: HTMLVideoElement,
+    onResult: (result: ClassificationAnalysis) => void,
+    fps = 5
+  ): () => void {
+    let isRunning = true;
+    let lastFrameTime = 0;
+    const frameInterval = 1000 / fps;
+
+    const classifyFrame = async (timestamp: number) => {
+      if (!isRunning) return;
+
+      // Throttle to target FPS
+      if (timestamp - lastFrameTime >= frameInterval) {
+        lastFrameTime = timestamp;
+
+        // Only classify if not currently processing
+        if (this.status !== 'processing') {
+          try {
+            const result = await this.classify({ imageElement: videoElement });
+            onResult(result);
+          } catch (error) {
+            console.error('Video classification error:', error);
+          }
+        }
+      }
+
+      requestAnimationFrame(classifyFrame);
+    };
+
+    requestAnimationFrame(classifyFrame);
+
+    // Return stop function
+    return () => {
+      isRunning = false;
+    };
+  }
+
+  /**
+   * Get current processing status
+   */
+  getStatus(): ProcessingStatus {
+    return this.status;
+  }
+
+  /**
+   * Check if model is ready for inference
+   */
+  isReady(): boolean {
+    return this.model !== null && this.status !== 'loading' && this.status !== 'error';
+  }
+
+  /**
+   * Update classification options
+   */
+  updateOptions(newOptions: Partial<ClassificationOptions>): void {
+    this.options = { ...this.options, ...newOptions };
+  }
+
+  /**
+   * Dispose of the model and free memory
+   */
+  async dispose(): Promise<void> {
+    if (this.model) {
+      // MobileNet model has dispose method
+      if (typeof this.model.dispose === 'function') {
+        this.model.dispose();
+      }
+      this.model = null;
+    }
+    this.status = 'idle';
+
+    if (this.options.debug) {
+      console.log('ImageClassification model disposed');
+    }
+  }
+}
+
+// Create a singleton instance for global use
+export const imageClassifier = new ImageClassification({
+  debug: typeof window !== 'undefined' && window.location.hostname === 'localhost',
+});

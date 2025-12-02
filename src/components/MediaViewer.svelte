@@ -1,6 +1,11 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import ObjectDetectionOverlay from './ObjectDetectionOverlay.svelte';
+  import ClassificationResults from './ClassificationResults.svelte';
+  import OCRResults from './OCRResults.svelte';
+  import AnalysisModeTabs from './AnalysisModeTabs.svelte';
+  import PerformanceMonitor from './PerformanceMonitor.svelte';
+  import type { AnalysisMode, ProcessingState, ClassificationAnalysis, OCRAnalysis, DetectionResult } from '../lib/types/analysis';
 
   // Type for window.detectionOverlay
   interface DetectionOverlayGlobal {
@@ -14,6 +19,22 @@
   let currentMode: 'video' | 'image' = 'video';
   let currentStream: MediaStream | null = null;
   let stopVideoDetection: (() => void) | null = null;
+  let stopVideoClassification: (() => void) | null = null;
+  let stopVideoOCR: (() => void) | null = null;
+
+  // Analysis Mode State
+  let activeAnalysisMode: AnalysisMode = 'detection';
+  let classificationProcessing: ProcessingState = { status: 'idle' };
+  let ocrProcessing: ProcessingState = { status: 'idle' };
+  let classificationResults: ClassificationAnalysis | null = null;
+  let ocrResults: OCRAnalysis | null = null;
+  let detectionResults: DetectionResult | null = null;
+
+  // Service instances (loaded dynamically)
+  let ImageClassificationClass: typeof import('../lib/imageClassification.js').ImageClassification | null = null;
+  let OCRExtractionClass: typeof import('../lib/ocrExtraction.js').OCRExtraction | null = null;
+  let imageClassifier: InstanceType<typeof import('../lib/imageClassification.js').ImageClassification> | null = null;
+  let ocrExtractor: InstanceType<typeof import('../lib/ocrExtraction.js').OCRExtraction> | null = null;
 
   // Element bindings
   let cameraVideo: HTMLVideoElement;
@@ -25,6 +46,8 @@
   // UI State
   let isCameraRunning = false;
   let isDetectionRunning = false;
+  let isClassificationRunning = false;
+  let isOCRRunning = false;
   let videoErrorMessage = '';
   let showVideoError = false;
   let showImageDisplay = false;
@@ -35,16 +58,71 @@
     return (window as any).detectionOverlay;
   }
 
+  // Initialize classification and OCR services
+  async function initializeServices(): Promise<void> {
+    try {
+      // Dynamically import to avoid SSR issues
+      const classificationModule = await import('../lib/imageClassification.js');
+      const ocrModule = await import('../lib/ocrExtraction.js');
+      
+      ImageClassificationClass = classificationModule.ImageClassification;
+      OCRExtractionClass = ocrModule.OCRExtraction;
+      
+      imageClassifier = new ImageClassificationClass({ debug: true });
+      ocrExtractor = new OCRExtractionClass({ debug: true });
+    } catch (error) {
+      console.error('Failed to initialize analysis services:', error);
+    }
+  }
+
+  onMount(() => {
+    initializeServices();
+  });
+
+  function handleAnalysisModeChange(mode: AnalysisMode): void {
+    // T034: Do NOT clear results when switching tabs - only change the active mode
+    // Results are only cleared when a new image is loaded (FR-010 compliance)
+    if (mode !== activeAnalysisMode) {
+      activeAnalysisMode = mode;
+    }
+  }
+
+  function clearAllAnalysisResults(): void {
+    classificationResults = null;
+    ocrResults = null;
+    classificationProcessing = { status: 'idle' };
+    ocrProcessing = { status: 'idle' };
+    
+    // Clear detection overlay
+    if (imageContainer) {
+      const overlay = imageContainer.querySelector('.detection-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+    }
+  }
+
   function switchToVideoMode() {
     currentMode = 'video';
     stopCamera();
     stopVideoObjectDetection();
+    stopAllVideoAnalysis();
   }
 
   function switchToImageMode() {
     currentMode = 'image';
     stopCamera();
     stopVideoObjectDetection();
+    stopAllVideoAnalysis();
+  }
+
+  function stopAllVideoAnalysis(): void {
+    stopVideoClassification?.();
+    stopVideoClassification = null;
+    stopVideoOCR?.();
+    stopVideoOCR = null;
+    isClassificationRunning = false;
+    isOCRRunning = false;
   }
 
   async function startCamera() {
@@ -131,6 +209,136 @@
     }
   }
 
+  // Classification handlers
+  async function handleClassifyImage(): Promise<void> {
+    if (!imageClassifier || !uploadedImage) {
+      displayVideoError('Classification not ready or no image loaded');
+      return;
+    }
+
+    try {
+      classificationProcessing = { status: 'loading', message: 'Loading classification model...' };
+      await imageClassifier.initialize();
+      
+      classificationProcessing = { status: 'processing', message: 'Classifying image...' };
+      const result = await imageClassifier.classify({ imageElement: uploadedImage });
+      
+      classificationResults = result;
+      classificationProcessing = { status: 'complete' };
+    } catch (error) {
+      console.error('Classification failed:', error);
+      classificationProcessing = { 
+        status: 'error', 
+        message: error instanceof Error ? error.message : 'Classification failed' 
+      };
+    }
+  }
+
+  async function startVideoClassification(): Promise<void> {
+    if (!imageClassifier || !cameraVideo) {
+      displayVideoError('Classification not ready or camera not started');
+      return;
+    }
+
+    try {
+      classificationProcessing = { status: 'loading', message: 'Loading classification model...' };
+      await imageClassifier.initialize();
+      
+      classificationProcessing = { status: 'processing', message: 'Running continuous classification...' };
+      isClassificationRunning = true;
+      
+      stopVideoClassification = imageClassifier.startVideoClassification(
+        cameraVideo,
+        (result) => {
+          classificationResults = result;
+          classificationProcessing = { status: 'complete' };
+        },
+        5 // 5 FPS
+      );
+    } catch (error) {
+      console.error('Video classification failed:', error);
+      classificationProcessing = { 
+        status: 'error', 
+        message: error instanceof Error ? error.message : 'Classification failed' 
+      };
+      isClassificationRunning = false;
+    }
+  }
+
+  function stopClassification(): void {
+    stopVideoClassification?.();
+    stopVideoClassification = null;
+    isClassificationRunning = false;
+    classificationProcessing = { status: 'idle' };
+  }
+
+  // OCR handlers
+  async function handleExtractText(): Promise<void> {
+    if (!ocrExtractor || !uploadedImage) {
+      displayVideoError('OCR not ready or no image loaded');
+      return;
+    }
+
+    try {
+      ocrProcessing = { status: 'loading', message: 'Loading OCR engine...' };
+      await ocrExtractor.initialize();
+      
+      ocrProcessing = { status: 'processing', message: 'Extracting text...' };
+      const result = await ocrExtractor.extractText({ imageElement: uploadedImage });
+      
+      ocrResults = result;
+      ocrProcessing = { status: 'complete' };
+    } catch (error) {
+      console.error('OCR failed:', error);
+      ocrProcessing = { 
+        status: 'error', 
+        message: error instanceof Error ? error.message : 'Text extraction failed' 
+      };
+    }
+  }
+
+  async function startVideoOCR(): Promise<void> {
+    if (!ocrExtractor || !cameraVideo) {
+      displayVideoError('OCR not ready or camera not started');
+      return;
+    }
+
+    try {
+      ocrProcessing = { status: 'loading', message: 'Loading OCR engine...' };
+      await ocrExtractor.initialize();
+      
+      ocrProcessing = { status: 'processing', message: 'Running continuous OCR...' };
+      isOCRRunning = true;
+      
+      stopVideoOCR = ocrExtractor.startVideoOCR(
+        cameraVideo,
+        (result) => {
+          ocrResults = result;
+          ocrProcessing = { status: 'complete' };
+        },
+        5 // 5 FPS
+      );
+    } catch (error) {
+      console.error('Video OCR failed:', error);
+      ocrProcessing = { 
+        status: 'error', 
+        message: error instanceof Error ? error.message : 'OCR failed' 
+      };
+      isOCRRunning = false;
+    }
+  }
+
+  function stopOCR(): void {
+    stopVideoOCR?.();
+    stopVideoOCR = null;
+    isOCRRunning = false;
+    ocrProcessing = { status: 'idle' };
+  }
+
+  function handleCopyText(text: string): void {
+    console.log('Text copied to clipboard:', text.substring(0, 50) + '...');
+  }
+
   function displayVideoError(message: string) {
     videoErrorMessage = message;
     showVideoError = true;
@@ -179,6 +387,11 @@
       return;
     }
 
+    // Clear previous analysis results (FR-010 compliance)
+    clearAllAnalysisResults();
+    classificationProcessing = { status: 'idle' };
+    ocrProcessing = { status: 'idle' };
+
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target && e.target.result && uploadedImage) {
@@ -206,6 +419,11 @@
     }
     showImageDisplay = false;
     
+    // Clear all analysis results (FR-010 compliance)
+    clearAllAnalysisResults();
+    classificationProcessing = { status: 'idle' };
+    ocrProcessing = { status: 'idle' };
+    
     // Clear any detection overlay
     if (imageContainer) {
       const overlay = imageContainer.querySelector('.detection-overlay');
@@ -221,6 +439,11 @@
 
   onDestroy(() => {
     stopCamera();
+    stopAllVideoAnalysis();
+    
+    // Dispose of ML models
+    imageClassifier?.dispose();
+    ocrExtractor?.dispose();
   });
 </script>
 
@@ -340,6 +563,61 @@
                   <span>Disable Detection</span>
                 </button>
               {/if}
+
+              <!-- Classification Button -->
+              {#if !isClassificationRunning}
+                <button
+                  onclick={startVideoClassification}
+                  class="control-btn classify"
+                  disabled={classificationProcessing.status === 'loading'}
+                >
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M4 5h16M4 12h16M4 19h10" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="19" cy="19" r="3" stroke-width="2"/>
+                  </svg>
+                  <span>{classificationProcessing.status === 'loading' ? 'Loading...' : 'Classify'}</span>
+                </button>
+              {:else}
+                <button
+                  onclick={stopClassification}
+                  class="control-btn secondary"
+                >
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                    <path d="M15 9l-6 6M9 9l6 6" stroke-width="2"/>
+                  </svg>
+                  <span>Stop Classify</span>
+                </button>
+              {/if}
+
+              <!-- OCR Button -->
+              {#if !isOCRRunning}
+                <button
+                  onclick={startVideoOCR}
+                  class="control-btn ocr"
+                  disabled={ocrProcessing.status === 'loading'}
+                >
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2"/>
+                    <polyline points="14 2 14 8 20 8" stroke-width="2"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke-width="2"/>
+                    <line x1="16" y1="17" x2="8" y2="17" stroke-width="2"/>
+                    <polyline points="10 9 9 9 8 9" stroke-width="2"/>
+                  </svg>
+                  <span>{ocrProcessing.status === 'loading' ? 'Loading...' : 'Extract Text'}</span>
+                </button>
+              {:else}
+                <button
+                  onclick={stopOCR}
+                  class="control-btn secondary"
+                >
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                    <path d="M15 9l-6 6M9 9l6 6" stroke-width="2"/>
+                  </svg>
+                  <span>Stop OCR</span>
+                </button>
+              {/if}
             {/if}
           </div>
 
@@ -352,6 +630,37 @@
               <p>{videoErrorMessage}</p>
             </div>
           {/if}
+
+          <!-- Analysis Results for Video Mode -->
+          <div class="analysis-results">
+            <!-- Analysis Mode Tabs -->
+            <AnalysisModeTabs
+              activeMode={activeAnalysisMode}
+              onModeChange={handleAnalysisModeChange}
+              hasDetectionResults={isDetectionRunning}
+              hasClassificationResults={classificationResults !== null}
+              hasOCRResults={ocrResults !== null}
+            />
+
+            <!-- Conditional Results Display based on Active Mode (T033) -->
+            {#if activeAnalysisMode === 'detection'}
+              <!-- Detection results shown via ObjectDetectionOverlay -->
+              <div class="mode-hint">
+                <span>Object detection overlay is displayed on the video</span>
+              </div>
+            {:else if activeAnalysisMode === 'classification'}
+              <ClassificationResults
+                analysis={classificationResults}
+                processing={classificationProcessing}
+              />
+            {:else if activeAnalysisMode === 'ocr'}
+              <OCRResults
+                analysis={ocrResults}
+                processing={ocrProcessing}
+                onCopyText={handleCopyText}
+              />
+            {/if}
+          </div>
         </div>
       </div>
     </div>
@@ -440,6 +749,82 @@
                   </svg>
                   <span>Upload Different</span>
                 </button>
+                
+                <!-- Classification Button for Images -->
+                <button
+                  onclick={handleClassifyImage}
+                  class="control-btn classify"
+                  disabled={classificationProcessing.status === 'loading' || classificationProcessing.status === 'processing'}
+                >
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M4 5h16M4 12h16M4 19h10" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="19" cy="19" r="3" stroke-width="2"/>
+                  </svg>
+                  <span>
+                    {#if classificationProcessing.status === 'loading'}
+                      Loading...
+                    {:else if classificationProcessing.status === 'processing'}
+                      Classifying...
+                    {:else}
+                      Classify
+                    {/if}
+                  </span>
+                </button>
+
+                <!-- OCR Button for Images -->
+                <button
+                  onclick={handleExtractText}
+                  class="control-btn ocr"
+                  disabled={ocrProcessing.status === 'loading' || ocrProcessing.status === 'processing'}
+                >
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2"/>
+                    <polyline points="14 2 14 8 20 8" stroke-width="2"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke-width="2"/>
+                    <line x1="16" y1="17" x2="8" y2="17" stroke-width="2"/>
+                    <polyline points="10 9 9 9 8 9" stroke-width="2"/>
+                  </svg>
+                  <span>
+                    {#if ocrProcessing.status === 'loading'}
+                      Loading...
+                    {:else if ocrProcessing.status === 'processing'}
+                      Extracting...
+                    {:else}
+                      Extract Text
+                    {/if}
+                  </span>
+                </button>
+              </div>
+
+              <!-- Analysis Results for Image Mode -->
+              <div class="analysis-results">
+                <!-- Analysis Mode Tabs -->
+                <AnalysisModeTabs
+                  activeMode={activeAnalysisMode}
+                  onModeChange={handleAnalysisModeChange}
+                  hasDetectionResults={false}
+                  hasClassificationResults={classificationResults !== null}
+                  hasOCRResults={ocrResults !== null}
+                />
+
+                <!-- Conditional Results Display based on Active Mode (T033) -->
+                {#if activeAnalysisMode === 'detection'}
+                  <!-- Detection results shown via ObjectDetectionOverlay -->
+                  <div class="mode-hint">
+                    <span>Object detection overlay is displayed on the image</span>
+                  </div>
+                {:else if activeAnalysisMode === 'classification'}
+                  <ClassificationResults
+                    analysis={classificationResults}
+                    processing={classificationProcessing}
+                  />
+                {:else if activeAnalysisMode === 'ocr'}
+                  <OCRResults
+                    analysis={ocrResults}
+                    processing={ocrProcessing}
+                    onCopyText={handleCopyText}
+                  />
+                {/if}
               </div>
             </div>
           {/if}
@@ -449,7 +834,18 @@
   {/if}
 
   <!-- Object Detection Overlay -->
-  <ObjectDetectionOverlay showControls={true} showStats={true} />
+  <ObjectDetectionOverlay 
+    showControls={true} 
+    showStats={true}
+    onDetectionResult={(result) => detectionResults = result}
+  />
+  
+  <!-- Performance Monitor (dev mode only) -->
+  <PerformanceMonitor
+    classificationResult={classificationResults}
+    ocrResult={ocrResults}
+    detectionResult={detectionResults}
+  />
 </div>
 
 <style>
@@ -911,6 +1307,63 @@
   stroke-width: 2;
   position: relative;
   z-index: 1;
+}
+
+/* Classification Button */
+.control-btn.classify {
+  background: linear-gradient(135deg, var(--cosmic-gold, #f59e0b), var(--cosmic-cyan));
+  border-color: var(--cosmic-gold, #f59e0b);
+}
+
+.control-btn.classify:hover:not(:disabled) {
+  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.4);
+  transform: translateY(-2px);
+}
+
+/* OCR Button */
+.control-btn.ocr {
+  background: linear-gradient(135deg, var(--cosmic-cyan), var(--cosmic-purple));
+  border-color: var(--cosmic-cyan);
+}
+
+.control-btn.ocr:hover:not(:disabled) {
+  box-shadow: 0 8px 30px rgba(6, 182, 212, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Disabled State */
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.control-btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Analysis Results Container */
+.analysis-results {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Mode Hint */
+.mode-hint {
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 0.75rem;
+  text-align: center;
+}
+
+.mode-hint span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Error Alert */
