@@ -25,6 +25,7 @@
   // UI State
   let showResults = false;
   let copySuccess = false;
+  let copyError = false;
   let copyTimeout: ReturnType<typeof setTimeout> | null = null;
   let showLanguageDropdown = false;
 
@@ -52,6 +53,7 @@
     try {
       await navigator.clipboard.writeText(analysis.fullText);
       copySuccess = true;
+      copyError = false;
       
       // Clear previous timeout
       if (copyTimeout) {
@@ -67,6 +69,18 @@
       onCopyText?.(analysis.fullText);
     } catch (error) {
       console.error('Failed to copy text:', error);
+      copyError = true;
+      copySuccess = false;
+      
+      // Clear previous timeout
+      if (copyTimeout) {
+        clearTimeout(copyTimeout);
+      }
+      
+      // Reset error after 3 seconds
+      copyTimeout = setTimeout(() => {
+        copyError = false;
+      }, 3000);
     }
   }
 
@@ -174,7 +188,7 @@
               <h4 class="section-title">Recognized Text</h4>
               <button 
                 onclick={copyToClipboard}
-                class="copy-btn {copySuccess ? 'success' : ''}"
+                class="copy-btn {copySuccess ? 'success' : ''} {copyError ? 'error' : ''}"
                 aria-label="Copy text to clipboard"
               >
                 {#if copySuccess}
@@ -182,6 +196,12 @@
                     <polyline points="20 6 9 17 4 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                   <span>Copied!</span>
+                {:else if copyError}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                    <path d="M15 9l-6 6M9 9l6 6" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  <span>Failed</span>
                 {:else}
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"/>
@@ -581,6 +601,12 @@
   background: rgba(34, 197, 94, 0.2);
   border-color: rgba(34, 197, 94, 0.4);
   color: #86efac;
+}
+
+.copy-btn.error {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
 }
 
 .copy-btn svg {
