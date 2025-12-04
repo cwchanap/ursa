@@ -107,6 +107,18 @@
 
       <div class="results-body">
         <h4 class="predictions-title">Top 5 Predictions</h4>
+        {#if analysis.predictions.length === 0}
+          <div class="no-predictions">
+            <div class="no-predictions-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <path d="M8 15s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <p class="no-predictions-text">No objects could be classified in this image</p>
+            <p class="no-predictions-hint">Try with a clearer image or different content</p>
+          </div>
+        {:else}
         <ul class="predictions-list">
           {#each analysis.predictions as prediction, index}
             <li class="prediction-item">
@@ -128,6 +140,7 @@
             </li>
           {/each}
         </ul>
+        {/if}
 
         <div class="results-meta">
           <div class="meta-item">
@@ -569,6 +582,44 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+/* No Predictions State */
+.no-predictions {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(251, 191, 36, 0.05);
+  border: 1px dashed rgba(251, 191, 36, 0.3);
+  border-radius: 0.75rem;
+}
+
+.no-predictions-icon {
+  width: 40px;
+  height: 40px;
+  color: rgba(251, 191, 36, 0.6);
+}
+
+.no-predictions-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.5;
+}
+
+.no-predictions-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
+.no-predictions-hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
   text-align: center;
 }
 
