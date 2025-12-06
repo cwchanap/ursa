@@ -6,6 +6,7 @@
   export let showControls: boolean = true;
   export let showStats: boolean = true;
   export let className: string = "";
+  export let onDetectionResult: ((result: DetectionResult) => void) | undefined = undefined;
 
   // State - use dynamic import to avoid SSR issues
   let ObjectDetectionClass: typeof import('../lib/objectDetection.js').ObjectDetection | null = null;
@@ -122,6 +123,9 @@
     inferenceTime = `${Math.round(result.inferenceTime)}ms`;
     showStatsContainer = true;
     detectedObjects = result.objects;
+    
+    // Notify parent component of detection result
+    onDetectionResult?.(result);
   }
 
   function clearDetections(): void {

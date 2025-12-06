@@ -188,3 +188,12 @@ Example: `import { cn } from '@/lib/utils'`
 - Time to first detection: <8s from page load
 
 Use browser DevTools Memory panel to verify no leaks during development.
+
+## Active Technologies
+
+- TypeScript 5.x (Astro 5.14.1 framework) (001-image-classification-ocr)
+- Browser-side only (no backend persistence) (001-image-classification-ocr)
+
+## Recent Changes
+
+- 001-image-classification-ocr: Added TypeScript 5.x (Astro 5.14.1 framework)
