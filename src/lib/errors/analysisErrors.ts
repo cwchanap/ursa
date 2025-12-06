@@ -22,7 +22,7 @@ export class AnalysisError extends Error {
     this.name = 'AnalysisError';
     // Maintains proper stack trace for where error was thrown
     if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, AnalysisError);
+      Error.captureStackTrace(this, this.constructor);
     }
   }
 

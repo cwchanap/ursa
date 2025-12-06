@@ -175,11 +175,19 @@ export function doBBoxesOverlap(bbox1: PixelBBox, bbox2: PixelBBox): boolean {
  * @returns Expanded bounding box
  */
 export function expandBBox(bbox: PixelBBox, padding: number): PixelBBox {
+  // Clamp width and height to minimum 0 to handle negative padding
+  const newWidth = Math.max(0, bbox.width + padding * 2);
+  const newHeight = Math.max(0, bbox.height + padding * 2);
+  
+  // Adjust position to keep the shrunken bbox centered within the original bbox
+  const x = bbox.x + (bbox.width - newWidth) / 2;
+  const y = bbox.y + (bbox.height - newHeight) / 2;
+  
   return {
-    x: bbox.x - padding,
-    y: bbox.y - padding,
-    width: bbox.width + padding * 2,
-    height: bbox.height + padding * 2,
+    x,
+    y,
+    width: newWidth,
+    height: newHeight,
   };
 }
 
@@ -196,12 +204,19 @@ export function clampBBox(
   imageWidth: number,
   imageHeight: number
 ): PixelBBox {
-  const x = Math.max(0, Math.min(bbox.x, imageWidth));
-  const y = Math.max(0, Math.min(bbox.y, imageHeight));
-  const width = Math.min(bbox.width, imageWidth - x);
-  const height = Math.min(bbox.height, imageHeight - y);
+  // First compute clamped coordinates
+  const clampedX = Math.max(0, Math.min(bbox.x, imageWidth));
+  const clampedY = Math.max(0, Math.min(bbox.y, imageHeight));
+  
+  // Compute shifts from original position
+  const shiftX = clampedX - bbox.x;
+  const shiftY = clampedY - bbox.y;
+  
+  // Adjust width and height to account for origin shifts and ensure no overflow
+  const width = Math.max(0, Math.min(bbox.width - shiftX, imageWidth - clampedX));
+  const height = Math.max(0, Math.min(bbox.height - shiftY, imageHeight - clampedY));
 
-  return { x, y, width, height };
+  return { x: clampedX, y: clampedY, width, height };
 }
 
 /**

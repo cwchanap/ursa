@@ -52,6 +52,8 @@
   let showVideoError = false;
   let showImageDisplay = false;
   let isDragOver = false;
+  let copyFeedbackMessage = '';
+  let showCopyFeedback = false;
 
   // Helper to get detection overlay from window
   function getDetectionOverlay(): DetectionOverlayGlobal | undefined {
@@ -335,8 +337,60 @@
     ocrProcessing = { status: 'idle' };
   }
 
-  function handleCopyText(text: string): void {
-    console.log('Text copied to clipboard:', text.substring(0, 50) + '...');
+  async function handleCopyText(text: string): Promise<void> {
+    try {
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        showCopyFeedbackMessage('Text copied to clipboard successfully!');
+        console.log('Text copied to clipboard:', text.substring(0, 50) + '...');
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        fallbackCopyToClipboard(text);
+      }
+    } catch (error) {
+      console.error('Failed to copy text to clipboard:', error);
+      showCopyFeedbackMessage('Failed to copy text. Please try again.', true);
+    }
+  }
+
+  function fallbackCopyToClipboard(text: string): void {
+    // Create a temporary textarea element
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      // Try the older execCommand approach
+      const successful = document.execCommand('copy');
+      if (successful) {
+        showCopyFeedbackMessage('Text copied to clipboard successfully!');
+        console.log('Text copied to clipboard (fallback):', text.substring(0, 50) + '...');
+      } else {
+        throw new Error('execCommand returned false');
+      }
+    } catch (error) {
+      console.error('Fallback clipboard method failed:', error);
+      showCopyFeedbackMessage('Failed to copy text. Please try again.', true);
+    } finally {
+      // Clean up the temporary element
+      document.body.removeChild(textArea);
+    }
+  }
+
+  function showCopyFeedbackMessage(message: string, isError = false): void {
+    copyFeedbackMessage = message;
+    showCopyFeedback = true;
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      showCopyFeedback = false;
+    }, 3000);
   }
 
   function displayVideoError(message: string) {
@@ -628,6 +682,21 @@
                 <path d="M12 8v4M12 16h.01" stroke-width="2" stroke-linecap="round"/>
               </svg>
               <p>{videoErrorMessage}</p>
+            </div>
+          {/if}
+
+          {#if showCopyFeedback}
+            <div class="copy-feedback {copyFeedbackMessage.includes('Failed') ? 'error' : 'success'}">
+              <svg class="feedback-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                {#if copyFeedbackMessage.includes('Failed')}
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                  <path d="M12 8v4M12 16h.01" stroke-width="2" stroke-linecap="round"/>
+                {:else}
+                  <path d="M9 12l2 2 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                {/if}
+              </svg>
+              <p>{copyFeedbackMessage}</p>
             </div>
           {/if}
 
@@ -1382,6 +1451,39 @@
 }
 
 .error-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  stroke-width: 2;
+}
+
+/* Copy Feedback Alert */
+.copy-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-radius: 0.75rem;
+  color: #86efac;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  animation: slideIn 0.3s ease-out;
+}
+
+.copy-feedback.success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+.copy-feedback.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.feedback-icon {
   width: 20px;
   height: 20px;
   flex-shrink: 0;

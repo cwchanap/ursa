@@ -244,10 +244,20 @@ export class OCRExtraction implements IOCRExtractionService {
   /**
    * Start continuous OCR on a video stream
    *
+   * **Important:** The caller MUST invoke the returned stop function to prevent memory leaks.
+   * The RAF loop continues indefinitely until explicitly stopped.
+   *
    * @param videoElement - Video element to process
    * @param onResult - Callback for each OCR result
    * @param fps - Target frames per second (default: 5)
    * @returns Stop function to end continuous OCR
+   *
+   * @example
+   * // React useEffect cleanup pattern
+   * useEffect(() => {
+   *   const stop = ocrExtractor.startVideoOCR(videoRef.current, handleResult);
+   *   return () => stop();
+   * }, []);
    */
   startVideoOCR(
     videoElement: HTMLVideoElement,
@@ -255,6 +265,7 @@ export class OCRExtraction implements IOCRExtractionService {
     fps = 5
   ): () => void {
     let isRunning = true;
+    let rafId: number | null = null;
     let lastFrameTime = 0;
     const frameInterval = 1000 / fps;
 
@@ -276,14 +287,18 @@ export class OCRExtraction implements IOCRExtractionService {
         }
       }
 
-      requestAnimationFrame(processFrame);
+      rafId = requestAnimationFrame(processFrame);
     };
 
-    requestAnimationFrame(processFrame);
+    rafId = requestAnimationFrame(processFrame);
 
     // Return stop function
     return () => {
       isRunning = false;
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
     };
   }
 
@@ -335,8 +350,27 @@ export class OCRExtraction implements IOCRExtractionService {
 
   /**
    * Update OCR options
+   *
+   * Note: `defaultLanguage` cannot be changed after the worker is initialized.
+   * Use `loadLanguage()` to switch languages at runtime instead.
+   *
+   * @param newOptions - Partial options to merge
+   * @throws Error if attempting to change defaultLanguage after initialization
    */
   updateOptions(newOptions: Partial<OCROptions>): void {
+    // defaultLanguage cannot be changed after worker initialization
+    if (newOptions.defaultLanguage !== undefined && this.worker !== null) {
+      console.warn(
+        'OCRExtraction: defaultLanguage cannot be changed after initialization. ' +
+        'Use loadLanguage() to switch languages at runtime.'
+      );
+      // Remove defaultLanguage from the update to prevent ambiguous state
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { defaultLanguage: _ignored, ...safeOptions } = newOptions;
+      this.options = { ...this.options, ...safeOptions };
+      return;
+    }
+
     this.options = { ...this.options, ...newOptions };
   }
 

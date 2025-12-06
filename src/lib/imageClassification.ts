@@ -33,6 +33,7 @@ export class ImageClassification implements IImageClassificationService {
   private model: any = null;
   private status: ProcessingStatus = 'idle';
   private options: Required<ClassificationOptions>;
+  private initializingPromise: Promise<void> | null = null;
 
   constructor(options: ClassificationOptions = {}) {
     this.options = {
@@ -46,56 +47,74 @@ export class ImageClassification implements IImageClassificationService {
    * Initialize TensorFlow.js and load the MobileNetV2 model
    */
   async initialize(): Promise<void> {
-    if (this.status === 'loading' || this.status === 'processing') {
+    // If already initializing, wait for the existing promise
+    if (this.initializingPromise) {
+      return this.initializingPromise;
+    }
+
+    // Already initialized
+    if (this.model) {
       return;
     }
 
-    if (this.model) {
-      return; // Already initialized
-    }
+    // Create and store the initialization promise
+    this.initializingPromise = (async () => {
+      this.status = 'loading';
 
-    this.status = 'loading';
+      try {
+        // Clear any previous performance marks/measures to prevent accumulation
+        performance.clearMarks('mobilenet-load-start');
+        performance.clearMarks('mobilenet-load-end');
+        performance.clearMeasures('mobilenet-load');
 
-    try {
-      // Performance mark for model loading
-      performance.mark('mobilenet-load-start');
+        // Performance mark for model loading
+        performance.mark('mobilenet-load-start');
 
-      // Set TensorFlow.js backend
-      await tf.setBackend('webgl');
-      await tf.ready();
+        // Set TensorFlow.js backend
+        await tf.setBackend('webgl');
+        await tf.ready();
 
-      // Verify WebGL is available
-      const backend = tf.getBackend();
-      if (backend !== 'webgl') {
-        throw new WebGLError('classification');
+        // Verify WebGL is available
+        const backend = tf.getBackend();
+        if (backend !== 'webgl') {
+          throw new WebGLError('classification');
+        }
+
+        // Load MobileNetV2 model (version 2, alpha 1.0 for best accuracy)
+        this.model = await mobilenet.load({
+          version: 2,
+          alpha: 1.0,
+        });
+
+        this.status = 'idle';
+
+        // Performance measurement
+        performance.mark('mobilenet-load-end');
+        performance.measure('mobilenet-load', 'mobilenet-load-start', 'mobilenet-load-end');
+
+        if (this.options.debug) {
+          const entries = performance.getEntriesByName('mobilenet-load');
+          const measure = entries[entries.length - 1]; // Use latest entry
+          if (measure) {
+            console.log(`MobileNetV2 loaded in ${measure.duration.toFixed(0)}ms`);
+          }
+        }
+      } catch (error) {
+        this.status = 'error';
+
+        if (error instanceof WebGLError) {
+          throw error;
+        }
+
+        const message = error instanceof Error ? error.message : String(error);
+        throw new ModelLoadError('classification', message);
+      } finally {
+        // Clear the promise so future calls can retry if needed
+        this.initializingPromise = null;
       }
+    })();
 
-      // Load MobileNetV2 model (version 2, alpha 1.0 for best accuracy)
-      this.model = await mobilenet.load({
-        version: 2,
-        alpha: 1.0,
-      });
-
-      this.status = 'idle';
-
-      // Performance measurement
-      performance.mark('mobilenet-load-end');
-      performance.measure('mobilenet-load', 'mobilenet-load-start', 'mobilenet-load-end');
-
-      if (this.options.debug) {
-        const measure = performance.getEntriesByName('mobilenet-load')[0];
-        console.log(`MobileNetV2 loaded in ${measure.duration.toFixed(0)}ms`);
-      }
-    } catch (error) {
-      this.status = 'error';
-
-      if (error instanceof WebGLError) {
-        throw error;
-      }
-
-      const message = error instanceof Error ? error.message : String(error);
-      throw new ModelLoadError('classification', message);
-    }
+    return this.initializingPromise;
   }
 
   /**
@@ -135,8 +154,19 @@ export class ImageClassification implements IImageClassificationService {
       );
 
       if (this.options.debug) {
-        const color = inferenceTime < 60 ? '\x1b[32m' : inferenceTime < 100 ? '\x1b[33m' : '\x1b[31m';
-        console.log(`${color}Classification inference: ${inferenceTime.toFixed(0)}ms\x1b[0m`);
+        const timeStr = `Classification inference: ${inferenceTime.toFixed(0)}ms`;
+        const isBrowser = typeof window !== 'undefined';
+
+        if (isBrowser) {
+          // Browser-friendly CSS styling
+          const cssColor = inferenceTime < 60 ? 'green' : inferenceTime < 100 ? 'orange' : 'red';
+          console.log(`%c${timeStr}`, `color: ${cssColor}`);
+        } else {
+          // Terminal ANSI escape sequences for Node/CLI
+          const ansiColor =
+            inferenceTime < 60 ? '\x1b[32m' : inferenceTime < 100 ? '\x1b[33m' : '\x1b[31m';
+          console.log(`${ansiColor}${timeStr}\x1b[0m`);
+        }
       }
 
       // Transform predictions to our format

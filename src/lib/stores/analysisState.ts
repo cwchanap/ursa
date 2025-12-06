@@ -195,66 +195,74 @@ export function setMediaElement(element: HTMLImageElement | HTMLVideoElement | n
  * Start real-time video analysis
  */
 export function startVideoStream(fps: number): void {
-  const state = get(analysisState);
+  analysisState.update((state) => {
+    // Clear any existing interval atomically with state update
+    if (state.videoStream?.analysisInterval) {
+      clearInterval(state.videoStream.analysisInterval);
+    }
 
-  // Clear any existing interval
-  if (state.videoStream?.analysisInterval) {
-    clearInterval(state.videoStream.analysisInterval);
-  }
-
-  analysisState.update((state) => ({
-    ...state,
-    videoStream: {
-      isActive: true,
-      fps,
-      analysisInterval: null, // Will be set by the component
-    },
-  }));
+    return {
+      ...state,
+      videoStream: {
+        isActive: true,
+        fps,
+        analysisInterval: null, // Will be set by the component
+      },
+    };
+  });
 }
 
 /**
  * Set the video analysis interval ID (for cleanup)
  */
 export function setVideoAnalysisInterval(intervalId: ReturnType<typeof setInterval>): void {
-  analysisState.update((state) => ({
-    ...state,
-    videoStream: state.videoStream
-      ? {
-          ...state.videoStream,
-          analysisInterval: intervalId,
-        }
-      : null,
-  }));
+  analysisState.update((state) => {
+    // If there's no videoStream, clear the interval immediately to prevent leaks
+    if (!state.videoStream) {
+      clearInterval(intervalId);
+      console.debug('Video analysis interval cleared because videoStream is null');
+      return state;
+    }
+
+    // Otherwise, store the intervalId on the existing videoStream
+    return {
+      ...state,
+      videoStream: {
+        ...state.videoStream,
+        analysisInterval: intervalId,
+      },
+    };
+  });
 }
 
 /**
  * Stop real-time video analysis
  */
 export function stopVideoStream(): void {
-  const state = get(analysisState);
+  analysisState.update((state) => {
+    // Clear interval atomically with state update
+    if (state.videoStream?.analysisInterval) {
+      clearInterval(state.videoStream.analysisInterval);
+    }
 
-  if (state.videoStream?.analysisInterval) {
-    clearInterval(state.videoStream.analysisInterval);
-  }
-
-  analysisState.update((state) => ({
-    ...state,
-    videoStream: null,
-  }));
+    return {
+      ...state,
+      videoStream: null,
+    };
+  });
 }
 
 /**
  * Reset to initial state
  */
 export function resetAnalysisState(): void {
-  const state = get(analysisState);
-
-  // Clean up video stream interval if exists
-  if (state.videoStream?.analysisInterval) {
-    clearInterval(state.videoStream.analysisInterval);
-  }
-
-  analysisState.set(INITIAL_ANALYSIS_STATE);
+  analysisState.update((state) => {
+    // Clean up video stream interval if exists (inside atomic update to avoid race)
+    if (state.videoStream?.analysisInterval) {
+      clearInterval(state.videoStream.analysisInterval);
+    }
+    return INITIAL_ANALYSIS_STATE;
+  });
 }
 
 /**
