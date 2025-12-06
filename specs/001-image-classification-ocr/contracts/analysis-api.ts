@@ -395,6 +395,19 @@ export function normalizeBBox(
   imageWidth: number,
   imageHeight: number
 ): NormalizedBBox {
+  // Validate image dimensions to prevent division by zero or invalid values
+  if (!Number.isFinite(imageWidth) || imageWidth <= 0) {
+    throw new Error(
+      `normalizeBBox: imageWidth must be a positive finite number (received: ${imageWidth}). Input bbox: {x: ${bbox.x}, y: ${bbox.y}, width: ${bbox.width}, height: ${bbox.height}}`
+    );
+  }
+
+  if (!Number.isFinite(imageHeight) || imageHeight <= 0) {
+    throw new Error(
+      `normalizeBBox: imageHeight must be a positive finite number (received: ${imageHeight}). Input bbox: {x: ${bbox.x}, y: ${bbox.y}, width: ${bbox.width}, height: ${bbox.height}}`
+    );
+  }
+
   return {
     x: bbox.x / imageWidth,
     y: bbox.y / imageHeight,

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import type { OCRAnalysis, ProcessingState } from '../lib/types/analysis';
 
   // Props
@@ -103,6 +104,13 @@
   function getLanguageName(code: string): string {
     return LANGUAGES.find(l => l.code === code)?.name || code.toUpperCase();
   }
+  // Ensure any pending copy timeout is cleared when the component unmounts
+  onDestroy(() => {
+    if (copyTimeout) {
+      clearTimeout(copyTimeout);
+      copyTimeout = null;
+    }
+  });
 </script>
 
 <div class="ocr-results {className}">

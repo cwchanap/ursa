@@ -11,6 +11,9 @@
   export let hasClassificationResults: boolean = false;
   export let hasOCRResults: boolean = false;
 
+  // Container element for scoped queries
+  let container: HTMLDivElement;
+
   // Tab definitions
   const tabs: Array<{
     mode: AnalysisMode;
@@ -72,7 +75,7 @@
     handleTabClick(newMode);
 
     // Focus the new tab button
-    const tabButtons = document.querySelectorAll('[role="tab"]');
+    const tabButtons = container.querySelectorAll('[role="tab"]');
     (tabButtons[newIndex] as HTMLElement)?.focus();
   }
 
@@ -90,11 +93,13 @@
   }
 
   function getActiveIndex(): number {
-    return tabs.findIndex(t => t.mode === activeMode);
+    const index = tabs.findIndex(t => t.mode === activeMode);
+    // Return 0 as safe default if activeMode isn't found to prevent undefined access
+    return index >= 0 ? index : 0;
   }
 </script>
 
-<div class="analysis-mode-tabs {className}">
+<div bind:this={container} class="analysis-mode-tabs {className}">
   <div 
     class="tabs-container" 
     role="tablist" 

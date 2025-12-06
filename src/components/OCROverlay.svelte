@@ -37,7 +37,7 @@
   });
 
   onDestroy(() => {
-    if (animationFrameId) {
+    if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
     }
     if (hoverDelayTimeout) {
@@ -55,11 +55,38 @@
     renderOverlay();
   }
 
+  /**
+   * Get image dimensions safely, returning null if image hasn't loaded
+   */
+  function getImageDimensions(): { width: number; height: number } | null {
+    if (!imageElement) return null;
+
+    let width: number;
+    let height: number;
+
+    if (imageElement instanceof HTMLVideoElement) {
+      width = imageElement.videoWidth;
+      height = imageElement.videoHeight;
+    } else {
+      width = imageElement.naturalWidth || imageElement.width;
+      height = imageElement.naturalHeight || imageElement.height;
+    }
+
+    // Bail out if image has zero dimensions (not loaded yet)
+    if (width <= 0 || height <= 0) return null;
+
+    return { width, height };
+  }
+
   function updateCanvasSize(): void {
     if (!canvas || !imageElement) return;
 
     // Get the displayed size of the media element
     const rect = imageElement.getBoundingClientRect();
+
+    // Defensive check: bail out if canvas has zero dimensions
+    if (rect.width <= 0 || rect.height <= 0) return;
+
     canvas.width = rect.width;
     canvas.height = rect.height;
 
@@ -88,15 +115,13 @@
 
     if (textRegions.length === 0) return;
 
-    // Get image dimensions for scaling
-    const imageWidth = imageElement instanceof HTMLVideoElement
-      ? imageElement.videoWidth
-      : imageElement.naturalWidth || imageElement.width;
-    const imageHeight = imageElement instanceof HTMLVideoElement
-      ? imageElement.videoHeight
-      : imageElement.naturalHeight || imageElement.height;
+    // Get image dimensions safely (returns null if image hasn't loaded)
+    const imageDims = getImageDimensions();
+    if (!imageDims) return; // Image hasn't loaded yet
 
-    // Calculate scale factors
+    const { width: imageWidth, height: imageHeight } = imageDims;
+
+    // Calculate scale factors - safe to divide since we validated dimensions > 0
     const scaleX = canvas.width / imageWidth;
     const scaleY = canvas.height / imageHeight;
 
@@ -132,19 +157,17 @@
   function handleMouseMove(event: MouseEvent): void {
     if (!canvas || !imageElement || textRegions.length === 0) return;
 
+    // Get image dimensions safely (returns null if image hasn't loaded)
+    const imageDims = getImageDimensions();
+    if (!imageDims) return; // Image hasn't loaded yet, bail out
+
     const rect = canvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
 
-    // Get image dimensions for scaling
-    const imageWidth = imageElement instanceof HTMLVideoElement
-      ? imageElement.videoWidth
-      : imageElement.naturalWidth || imageElement.width;
-    const imageHeight = imageElement instanceof HTMLVideoElement
-      ? imageElement.videoHeight
-      : imageElement.naturalHeight || imageElement.height;
+    const { width: imageWidth, height: imageHeight } = imageDims;
 
-    // Calculate scale factors
+    // Calculate scale factors - safe to divide since we validated dimensions > 0
     const scaleX = canvas.width / imageWidth;
     const scaleY = canvas.height / imageHeight;
 
