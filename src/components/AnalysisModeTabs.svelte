@@ -2,14 +2,24 @@
   import type { AnalysisMode, ProcessingState } from '../lib/types/analysis';
 
   // Props
-  export let activeMode: AnalysisMode = 'detection';
-  export let onModeChange: ((mode: AnalysisMode) => void) | undefined = undefined;
-  export let className: string = "";
-  
-  // Optional: Show completion indicators
-  export let hasDetectionResults: boolean = false;
-  export let hasClassificationResults: boolean = false;
-  export let hasOCRResults: boolean = false;
+  interface Props {
+    activeMode?: AnalysisMode;
+    onModeChange?: ((mode: AnalysisMode) => void) | undefined;
+    className?: string;
+    // Optional: Show completion indicators
+    hasDetectionResults?: boolean;
+    hasClassificationResults?: boolean;
+    hasOCRResults?: boolean;
+  }
+
+  let {
+    activeMode = 'detection',
+    onModeChange = undefined,
+    className = "",
+    hasDetectionResults = false,
+    hasClassificationResults = false,
+    hasOCRResults = false,
+  }: Props = $props();
 
   // Container element for scoped queries
   let container: HTMLDivElement;

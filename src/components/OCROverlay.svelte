@@ -3,10 +3,19 @@
   import type { OCRResult } from '../lib/types/analysis';
 
   // Props
-  export let textRegions: OCRResult[] = [];
-  export let imageElement: HTMLImageElement | HTMLVideoElement | null = null;
-  export let visible: boolean = true;
-  export let className: string = "";
+  interface Props {
+    textRegions?: OCRResult[];
+    imageElement?: HTMLImageElement | HTMLVideoElement | null;
+    visible?: boolean;
+    className?: string;
+  }
+
+  let {
+    textRegions = [],
+    imageElement = null,
+    visible = true,
+    className = "",
+  }: Props = $props();
 
   // Internal state
   let canvas: HTMLCanvasElement;
@@ -47,13 +56,17 @@
   });
 
   // Reactive: Update canvas when image element or regions change
-  $: if (imageElement && ctx) {
-    updateCanvasSize();
-  }
+  $effect(() => {
+    if (imageElement && ctx) {
+      updateCanvasSize();
+    }
+  });
 
-  $: if (textRegions && ctx) {
-    renderOverlay();
-  }
+  $effect(() => {
+    if (textRegions && ctx) {
+      renderOverlay();
+    }
+  });
 
   /**
    * Get image dimensions safely, returning null if image hasn't loaded
