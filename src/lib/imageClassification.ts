@@ -16,8 +16,8 @@ import type {
   ClassifyImageRequest,
   ProcessingStatus,
   IImageClassificationService,
-} from './types/analysis';
-import { ModelLoadError, InferenceError, WebGLError } from './errors/analysisErrors';
+} from '@/lib/types/analysis';
+import { ModelLoadError, InferenceError, WebGLError } from '@/lib/errors/analysisErrors';
 
 export interface ClassificationOptions {
   /** Number of top predictions to return (default: 5) */

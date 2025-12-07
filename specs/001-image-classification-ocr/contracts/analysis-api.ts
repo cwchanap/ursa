@@ -229,6 +229,7 @@ export interface IOCRExtractionService {
 
 /**
  * Global analysis state (Svelte store)
+ * Implemented by: src/lib/stores/analysisState.ts
  */
 export interface AnalysisState {
   /** Currently active analysis mode */
@@ -276,7 +277,7 @@ export interface DetectionResult {
 
 /**
  * State management actions
- * Implemented by: src/lib/analysisState.ts
+ * Implemented by: src/lib/stores/analysisState.ts
  */
 export interface IAnalysisStateActions {
   /** Switch active analysis mode */
