@@ -222,6 +222,49 @@
       classificationProcessing = { status: 'loading', message: 'Loading classification model...' };
       await imageClassifier.initialize();
       
+      // Check status after initialization
+      let status = imageClassifier.getStatus();
+      
+      if (status === 'loading') {
+        // Set loading state and poll until idle or error
+        classificationProcessing = { status: 'loading', message: 'Waiting for model to be ready...' };
+        
+        // Poll for status change
+        const maxWaitTime = 30000; // 30 seconds max
+        const pollInterval = 100; // 100ms intervals
+        let waitedTime = 0;
+        
+        while (status === 'loading' && waitedTime < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          waitedTime += pollInterval;
+          const newStatus = imageClassifier.getStatus();
+          
+          if (newStatus !== 'loading') {
+            // Status changed, update and break
+            status = newStatus;
+            break;
+          }
+        }
+        
+        // Check if we timed out
+        if (status === 'loading') {
+          classificationProcessing = {
+            status: 'error',
+            message: 'Model initialization timed out after 30 seconds'
+          };
+          return;
+        }
+      }
+      
+      // Now check if status is idle (ready for classification)
+      if (status !== 'idle') {
+        classificationProcessing = {
+          status: 'error',
+          message: `Model not ready for classification. Current status: ${status}`
+        };
+        return;
+      }
+      
       classificationProcessing = { status: 'processing', message: 'Classifying image...' };
       const result = await imageClassifier.classify({ imageElement: uploadedImage });
       
@@ -229,9 +272,9 @@
       classificationProcessing = { status: 'complete' };
     } catch (error) {
       console.error('Classification failed:', error);
-      classificationProcessing = { 
-        status: 'error', 
-        message: error instanceof Error ? error.message : 'Classification failed' 
+      classificationProcessing = {
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Classification failed'
       };
     }
   }
