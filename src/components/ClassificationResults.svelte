@@ -3,15 +3,20 @@
   import type { ClassificationAnalysis, ProcessingState } from '../lib/types/analysis';
 
   // Props
-  export let analysis: ClassificationAnalysis | null = null;
-  export let processing: ProcessingState = { status: 'idle' };
-  export let className: string = "";
+  interface Props {
+    analysis?: ClassificationAnalysis | null;
+    processing?: ProcessingState;
+    className?: string;
+  }
+
+  let {
+    analysis = null,
+    processing = { status: 'idle' },
+    className = "",
+  }: Props = $props();
 
   // UI State
-  let showResults = false;
-
-  // Reactive: Show results when analysis is available
-  $: showResults = analysis !== null && processing.status === 'complete';
+  let showResults = $derived(analysis !== null && processing.status === 'complete');
 
   // Get color class based on confidence level
   function getConfidenceColor(confidence: number): string {

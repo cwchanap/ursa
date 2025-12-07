@@ -3,10 +3,19 @@
   import type { DetectionResult } from '../lib/objectDetection.js';
 
   // Props
-  export let showControls: boolean = true;
-  export let showStats: boolean = true;
-  export let className: string = "";
-  export let onDetectionResult: ((result: DetectionResult) => void) | undefined = undefined;
+  interface Props {
+    showControls?: boolean;
+    showStats?: boolean;
+    className?: string;
+    onDetectionResult?: ((result: DetectionResult) => void) | undefined;
+  }
+
+  let {
+    showControls = true,
+    showStats = true,
+    className = "",
+    onDetectionResult = undefined,
+  }: Props = $props();
 
   // State - use dynamic import to avoid SSR issues
   let ObjectDetectionClass: typeof import('../lib/objectDetection.js').ObjectDetection | null = null;
@@ -169,9 +178,11 @@
   }
 
   // Reactive updates for detector options
-  $: if (detector) {
-    updateDetectorOptions();
-  }
+  $effect(() => {
+    if (detector) {
+      updateDetectorOptions();
+    }
+  });
 </script>
 
 <div class="object-detection-overlay {className}">
