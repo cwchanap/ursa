@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import ObjectDetectionOverlay from './ObjectDetectionOverlay.svelte';
 
+// Mock TensorFlow.js to prevent WebGL initialization
+vi.mock('@tensorflow/tfjs', () => ({
+  ready: vi.fn(() => Promise.resolve()),
+  setBackend: vi.fn(() => Promise.resolve()),
+  dispose: vi.fn(),
+  tidy: vi.fn((fn: any) => fn()),
+}));
+
+vi.mock('@tensorflow/tfjs-backend-webgl', () => ({}));
+
 // Mock the ObjectDetection class
 const mockInitialize = vi.fn(() => Promise.resolve());
 const mockProcessImage = vi.fn(() => Promise.resolve({
@@ -14,14 +24,18 @@ const mockProcessImage = vi.fn(() => Promise.resolve({
 const mockUpdateOptions = vi.fn();
 const mockDispose = vi.fn();
 
-vi.mock('../lib/objectDetection.js', () => ({
+// Mock both .js and .ts extensions to be safe
+const mockObjectDetection = {
   ObjectDetection: class {
     initialize = mockInitialize;
     processImage = mockProcessImage;
     updateOptions = mockUpdateOptions;
     dispose = mockDispose;
   },
-}));
+};
+
+vi.mock('../lib/objectDetection.js', () => mockObjectDetection);
+vi.mock('../lib/objectDetection', () => mockObjectDetection);
 
 describe('ObjectDetectionOverlay Component', () => {
   beforeEach(() => {

@@ -3,12 +3,23 @@
   import type { OCRAnalysis, ProcessingState } from '../lib/types/analysis';
 
   // Props
-  export let analysis: OCRAnalysis | null = null;
-  export let processing: ProcessingState = { status: 'idle' };
-  export let onCopyText: ((text: string) => void) | undefined = undefined;
-  export let onLanguageChange: ((language: string) => void) | undefined = undefined;
-  export let currentLanguage: string = 'eng';
-  export let className: string = "";
+  interface Props {
+    analysis?: OCRAnalysis | null;
+    processing?: ProcessingState;
+    onCopyText?: ((text: string) => void) | undefined;
+    onLanguageChange?: ((language: string) => void) | undefined;
+    currentLanguage?: string;
+    className?: string;
+  }
+
+  let {
+    analysis = null,
+    processing = { status: 'idle' },
+    onCopyText = undefined,
+    onLanguageChange = undefined,
+    currentLanguage = 'eng',
+    className = ""
+  }: Props = $props();
 
   // Available languages
   const LANGUAGES = [
@@ -24,14 +35,13 @@
   ];
 
   // UI State
-  let showResults = false;
-  let copySuccess = false;
-  let copyError = false;
-  let copyTimeout: ReturnType<typeof setTimeout> | null = null;
-  let showLanguageDropdown = false;
+  let copySuccess = $state(false);
+  let copyError = $state(false);
+  let copyTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
+  let showLanguageDropdown = $state(false);
 
   // Reactive: Show results when analysis is available
-  $: showResults = analysis !== null && processing.status === 'complete';
+  let showResults = $derived(analysis !== null && processing.status === 'complete');
 
   // Get processing time color class
   function getProcessingTimeColor(ms: number): string {

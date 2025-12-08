@@ -16,42 +16,42 @@
   }
 
   // State
-  let currentMode: 'video' | 'image' = 'video';
-  let currentStream: MediaStream | null = null;
-  let stopVideoDetection: (() => void) | null = null;
-  let stopVideoClassification: (() => void) | null = null;
-  let stopVideoOCR: (() => void) | null = null;
+  let currentMode = $state<'video' | 'image'>('video');
+  let currentStream = $state<MediaStream | null>(null);
+  let stopVideoDetection = $state<(() => void) | null>(null);
+  let stopVideoClassification = $state<(() => void) | null>(null);
+  let stopVideoOCR = $state<(() => void) | null>(null);
 
   // Analysis Mode State
-  let activeAnalysisMode: AnalysisMode = 'detection';
-  let classificationProcessing: ProcessingState = { status: 'idle' };
-  let ocrProcessing: ProcessingState = { status: 'idle' };
-  let classificationResults: ClassificationAnalysis | null = null;
-  let ocrResults: OCRAnalysis | null = null;
-  let detectionResults: DetectionResult | null = null;
+  let activeAnalysisMode = $state<AnalysisMode>('detection');
+  let classificationProcessing = $state<ProcessingState>({ status: 'idle' });
+  let ocrProcessing = $state<ProcessingState>({ status: 'idle' });
+  let classificationResults = $state<ClassificationAnalysis | null>(null);
+  let ocrResults = $state<OCRAnalysis | null>(null);
+  let detectionResults = $state<DetectionResult | null>(null);
 
   // Service instances (loaded dynamically as singletons)
-  let imageClassifier: typeof import('../lib/imageClassification.js').imageClassifier | null = null;
-  let ocrExtractor: typeof import('../lib/ocrExtraction.js').ocrExtractor | null = null;
+  let imageClassifier = $state<typeof import('../lib/imageClassification.js').imageClassifier | null>(null);
+  let ocrExtractor = $state<typeof import('../lib/ocrExtraction.js').ocrExtractor | null>(null);
 
   // Element bindings
-  let cameraVideo: HTMLVideoElement;
-  let videoContainer: HTMLElement;
-  let imageContainer: HTMLElement;
-  let uploadedImage: HTMLImageElement;
-  let imageInput: HTMLInputElement;
+  let cameraVideo = $state<HTMLVideoElement>();
+  let videoContainer = $state<HTMLElement>();
+  let imageContainer = $state<HTMLElement>();
+  let uploadedImage = $state<HTMLImageElement>();
+  let imageInput = $state<HTMLInputElement>();
 
   // UI State
-  let isCameraRunning = false;
-  let isDetectionRunning = false;
-  let isClassificationRunning = false;
-  let isOCRRunning = false;
-  let videoErrorMessage = '';
-  let showVideoError = false;
-  let showImageDisplay = false;
-  let isDragOver = false;
-  let copyFeedbackMessage = '';
-  let showCopyFeedback = false;
+  let isCameraRunning = $state(false);
+  let isDetectionRunning = $state(false);
+  let isClassificationRunning = $state(false);
+  let isOCRRunning = $state(false);
+  let videoErrorMessage = $state('');
+  let showVideoError = $state(false);
+  let showImageDisplay = $state(false);
+  let isDragOver = $state(false);
+  let copyFeedbackMessage = $state('');
+  let showCopyFeedback = $state(false);
 
   // Helper to get detection overlay from window
   function getDetectionOverlay(): DetectionOverlayGlobal | undefined {
