@@ -25,6 +25,8 @@ export default defineConfig({
 				// @tensorflow-models/coco-ssd imports node-fetch for its HTTP client
 				// In the browser, we redirect to native fetch API
 				'node-fetch': path.resolve(__dirname, 'src/lib/shims/node-fetch-browser.ts'),
+				// TypeScript path alias support for Vite
+				'@': path.resolve(__dirname, 'src'),
 			},
 		},
 		optimizeDeps: {

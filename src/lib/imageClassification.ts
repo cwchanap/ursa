@@ -29,8 +29,7 @@ export interface ClassificationOptions {
 }
 
 export class ImageClassification implements IImageClassificationService {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private model: any = null;
+  private model: mobilenet.MobileNet | null = null;
   private status: ProcessingStatus = 'idle';
   private options: Required<ClassificationOptions>;
   private initializingPromise: Promise<void> | null = null;
@@ -140,8 +139,10 @@ export class ImageClassification implements IImageClassificationService {
       performance.mark('classification-inference-start');
 
       // Run classification
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const predictions: any[] = await this.model.classify(imageElement, topK);
+      const predictions: Array<{ className: string; probability: number }> = await this.model.classify(
+        imageElement,
+        topK
+      );
 
       const inferenceTime = performance.now() - startTime;
 
@@ -275,9 +276,10 @@ export class ImageClassification implements IImageClassificationService {
    */
   async dispose(): Promise<void> {
     if (this.model) {
-      // MobileNet model has dispose method
-      if (typeof this.model.dispose === 'function') {
-        this.model.dispose();
+      // MobileNet model cleanup - cast to any for dispose method
+      const model = this.model as any;
+      if (typeof model.dispose === 'function') {
+        model.dispose();
       }
       this.model = null;
     }
