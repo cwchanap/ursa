@@ -30,11 +30,9 @@
   let ocrResults: OCRAnalysis | null = null;
   let detectionResults: DetectionResult | null = null;
 
-  // Service instances (loaded dynamically)
-  let ImageClassificationClass: typeof import('../lib/imageClassification.js').ImageClassification | null = null;
-  let OCRExtractionClass: typeof import('../lib/ocrExtraction.js').OCRExtraction | null = null;
-  let imageClassifier: InstanceType<typeof import('../lib/imageClassification.js').ImageClassification> | null = null;
-  let ocrExtractor: InstanceType<typeof import('../lib/ocrExtraction.js').OCRExtraction> | null = null;
+  // Service instances (loaded dynamically as singletons)
+  let imageClassifier: typeof import('../lib/imageClassification.js').imageClassifier | null = null;
+  let ocrExtractor: typeof import('../lib/ocrExtraction.js').ocrExtractor | null = null;
 
   // Element bindings
   let cameraVideo: HTMLVideoElement;
@@ -63,15 +61,13 @@
   // Initialize classification and OCR services
   async function initializeServices(): Promise<void> {
     try {
-      // Dynamically import to avoid SSR issues
+      // Dynamically import to avoid SSR issues - use exported singletons
       const classificationModule = await import('../lib/imageClassification.js');
       const ocrModule = await import('../lib/ocrExtraction.js');
       
-      ImageClassificationClass = classificationModule.ImageClassification;
-      OCRExtractionClass = ocrModule.OCRExtraction;
-      
-      imageClassifier = new ImageClassificationClass({ debug: true });
-      ocrExtractor = new OCRExtractionClass({ debug: true });
+      // Reuse the already-exported singleton instances
+      imageClassifier = classificationModule.imageClassifier;
+      ocrExtractor = ocrModule.ocrExtractor;
     } catch (error) {
       console.error('Failed to initialize analysis services:', error);
     }
@@ -538,9 +534,8 @@
     stopCamera();
     stopAllVideoAnalysis();
     
-    // Dispose of ML models
-    imageClassifier?.dispose();
-    ocrExtractor?.dispose();
+    // Note: Do NOT dispose singletons here - they are shared across the app
+    // and should persist for the lifetime of the application
   });
 </script>
 
