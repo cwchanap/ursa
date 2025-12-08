@@ -18,33 +18,44 @@
   }: Props = $props();
 
   // State - use dynamic import to avoid SSR issues
-  let ObjectDetectionClass: typeof import('../lib/objectDetection.js').ObjectDetection | null = null;
-  let detector: InstanceType<typeof import('../lib/objectDetection.js').ObjectDetection> | null = null;
-  let isInitialized = false;
-  let currentMediaElement: HTMLImageElement | HTMLVideoElement | null = null;
-  let currentContainer: HTMLElement | null = null;
+  let ObjectDetectionClass = $state<typeof import('../lib/objectDetection.js').ObjectDetection | null>(null);
+  let detector = $state<InstanceType<typeof import('../lib/objectDetection.js').ObjectDetection> | null>(null);
+  let isInitialized = $state(false);
+  let currentMediaElement = $state<HTMLImageElement | HTMLVideoElement | null>(null);
+  let currentContainer = $state<HTMLElement | null>(null);
 
   // UI State
-  let confidenceValue = 50;
-  let maxDetectionsValue = 20;
-  let showLabels = true;
-  let showScores = true;
-  let isSettingsPanelOpen = false;
+  let confidenceValue = $state(50);
+  let maxDetectionsValue = $state(20);
+  let showLabels = $state(true);
+  let showScores = $state(true);
+  let isSettingsPanelOpen = $state(false);
 
   // Stats State
-  let objectsCount: string = '-';
-  let inferenceTime: string = '-';
-  let modelStatus: string = 'Not loaded';
-  let modelStatusClass: string = 'font-medium text-gray-500';
-  let detectedObjects: Array<{ class: string; score: number }> = [];
-  let showStatsContainer = false;
+  let objectsCount = $state('-');
+  let inferenceTime = $state('-');
+  let modelStatus = $state('Not loaded');
+  let modelStatusClass = $state('font-medium text-gray-500');
+  let detectedObjects = $state<Array<{ class: string; score: number }>>([]);
+  let showStatsContainer = $state(false);
 
   // Loading/Error State
-  let isLoading = false;
-  let loadingText = 'Loading model...';
-  let hasError = false;
-  let errorMessage = 'An error occurred during object detection.';
-  let isDetecting = false;
+  let isLoading = $state(false);
+  let loadingText = $state('Loading model...');
+  let hasError = $state(false);
+  let errorMessage = $state('An error occurred during object detection.');
+  let isDetecting = $state(false);
+
+  $effect(() => {
+    if (detector) {
+      detector.updateOptions({
+        minScore: confidenceValue / 100,
+        maxDetections: maxDetectionsValue,
+        showLabels,
+        showScores,
+      });
+    }
+  });
 
   onMount(async () => {
     // Expose to window for MediaViewer integration immediately
@@ -84,17 +95,6 @@
   onDestroy(() => {
     detector?.dispose();
   });
-
-  function updateDetectorOptions() {
-    if (!detector) return;
-
-    detector.updateOptions({
-      minScore: confidenceValue / 100,
-      maxDetections: maxDetectionsValue,
-      showLabels,
-      showScores,
-    });
-  }
 
   export function setMediaElement(
     mediaElement: HTMLImageElement | HTMLVideoElement,
@@ -180,7 +180,12 @@
   // Reactive updates for detector options
   $effect(() => {
     if (detector) {
-      updateDetectorOptions();
+      detector.updateOptions({
+        minScore: confidenceValue / 100,
+        maxDetections: maxDetectionsValue,
+        showLabels,
+        showScores,
+      });
     }
   });
 </script>
