@@ -121,6 +121,10 @@
     stopVideoOCR = null;
     isClassificationRunning = false;
     isOCRRunning = false;
+    
+    // Reset processing states to prevent stale loading UI when switching modes
+    classificationProcessing = { status: 'idle' };
+    ocrProcessing = { status: 'idle' };
   }
 
   async function startCamera() {
