@@ -344,7 +344,12 @@
     stopVideoClassification?.();
     stopVideoClassification = null;
     isClassificationRunning = false;
-    classificationProcessing = { status: 'idle' };
+    // Keep status as 'complete' if we have results to show, otherwise reset to idle
+    if (classificationResults) {
+      classificationProcessing = { status: 'complete' };
+    } else {
+      classificationProcessing = { status: 'idle' };
+    }
   }
 
   // OCR handlers
@@ -483,7 +488,12 @@
     stopVideoOCR?.();
     stopVideoOCR = null;
     isOCRRunning = false;
-    ocrProcessing = { status: 'idle' };
+    // Keep status as 'complete' if we have results to show, otherwise reset to idle
+    if (ocrResults) {
+      ocrProcessing = { status: 'complete' };
+    } else {
+      ocrProcessing = { status: 'idle' };
+    }
   }
 
   async function handleCopyText(text: string): Promise<void> {
