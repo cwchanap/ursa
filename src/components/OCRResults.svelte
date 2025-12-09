@@ -134,10 +134,6 @@
 
   onDestroy(() => {
     window.removeEventListener('click', handleOutsideClick);
-  });
-
-  // Ensure any pending copy timeout is cleared when the component unmounts
-  onDestroy(() => {
     if (copyTimeout) {
       clearTimeout(copyTimeout);
       copyTimeout = null;

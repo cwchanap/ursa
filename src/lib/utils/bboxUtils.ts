@@ -179,9 +179,10 @@ export function expandBBox(bbox: PixelBBox, padding: number): PixelBBox {
   const newWidth = Math.max(0, bbox.width + padding * 2);
   const newHeight = Math.max(0, bbox.height + padding * 2);
   
-  // Adjust position to keep the shrunken bbox centered within the original bbox
-  const x = bbox.x + (bbox.width - newWidth) / 2;
-  const y = bbox.y + (bbox.height - newHeight) / 2;
+  // Adjust position: for expansion (positive padding) move outward, 
+  // for shrinking (negative padding) move inward
+  const x = bbox.x - padding;
+  const y = bbox.y - padding;
   
   return {
     x,

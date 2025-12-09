@@ -253,11 +253,20 @@ export class OCRExtraction implements IOCRExtractionService {
    * @returns Stop function to end continuous OCR
    *
    * @example
-   * // React useEffect cleanup pattern
-   * useEffect(() => {
-   *   const stop = ocrExtractor.startVideoOCR(videoRef.current, handleResult);
-   *   return () => stop();
-   * }, []);
+   * // Svelte onDestroy cleanup pattern
+   * onDestroy(() => {
+   *   const stop = ocrExtractor.startVideoOCR(videoElement, handleResult);
+   *   return stop;
+   * });
+   * 
+   * // Or with explicit stop function storage
+   * let stopOCR: (() => void) | null = null;
+   * onMount(() => {
+   *   stopOCR = ocrExtractor.startVideoOCR(videoElement, handleResult);
+   * });
+   * onDestroy(() => {
+   *   stopOCR?.();
+   * });
    */
   startVideoOCR(
     videoElement: HTMLVideoElement,

@@ -218,6 +218,7 @@ export class ImageClassification implements IImageClassificationService {
     fps = 5
   ): () => void {
     let isRunning = true;
+    let rafId: number | null = null;
     let lastFrameTime = 0;
     const frameInterval = 1000 / fps;
 
@@ -239,14 +240,18 @@ export class ImageClassification implements IImageClassificationService {
         }
       }
 
-      requestAnimationFrame(classifyFrame);
+      rafId = requestAnimationFrame(classifyFrame);
     };
 
-    requestAnimationFrame(classifyFrame);
+    rafId = requestAnimationFrame(classifyFrame);
 
     // Return stop function
     return () => {
       isRunning = false;
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
     };
   }
 
@@ -276,9 +281,9 @@ export class ImageClassification implements IImageClassificationService {
    */
   async dispose(): Promise<void> {
     if (this.model) {
-      // MobileNet model cleanup - cast to any for dispose method
-      const model = this.model as any;
-      if (typeof model.dispose === 'function') {
+      // MobileNet model cleanup - dispose method exists but isn't in types
+      const model = this.model as unknown as { dispose?: () => void };
+      if (model.dispose) {
         model.dispose();
       }
       this.model = null;
