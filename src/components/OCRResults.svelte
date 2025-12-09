@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import type { OCRAnalysis, ProcessingState } from '../lib/types/analysis';
+  import { onMount } from 'svelte';
 
   // Props
   interface Props {
@@ -114,6 +115,27 @@
   function getLanguageName(code: string): string {
     return LANGUAGES.find(l => l.code === code)?.name || code.toUpperCase();
   }
+
+  function handleOutsideClick(event: MouseEvent): void {
+    if (!showLanguageDropdown) return;
+
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+
+    const container = target.closest('.language-dropdown-container');
+    if (!container) {
+      showLanguageDropdown = false;
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener('click', handleOutsideClick);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('click', handleOutsideClick);
+  });
+
   // Ensure any pending copy timeout is cleared when the component unmounts
   onDestroy(() => {
     if (copyTimeout) {

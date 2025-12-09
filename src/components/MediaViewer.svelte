@@ -284,10 +284,40 @@
     try {
       classificationProcessing = { status: 'loading', message: 'Loading classification model...' };
       await imageClassifier.initialize();
-      
+
+      // Wait for model to be idle before starting continuous classification
+      let status = imageClassifier.getStatus();
+
+      if (status === 'loading') {
+        classificationProcessing = { status: 'loading', message: 'Waiting for model to be ready...' };
+
+        const maxWaitTime = 30000; // 30 seconds max
+        const pollInterval = 100; // 100ms intervals
+        let waitedTime = 0;
+
+        while (status === 'loading' && waitedTime < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          waitedTime += pollInterval;
+          const newStatus = imageClassifier.getStatus();
+
+          if (newStatus !== 'loading') {
+            status = newStatus;
+            break;
+          }
+        }
+
+        if (status === 'loading') {
+          throw new Error('Model initialization timed out after 30 seconds');
+        }
+      }
+
+      if (status !== 'idle') {
+        throw new Error(`Model not ready for classification. Current status: ${status}`);
+      }
+
       classificationProcessing = { status: 'processing', message: 'Running continuous classification...' };
       isClassificationRunning = true;
-      
+
       stopVideoClassification = imageClassifier.startVideoClassification(
         cameraVideo,
         (result) => {
@@ -323,7 +353,45 @@
     try {
       ocrProcessing = { status: 'loading', message: 'Loading OCR engine...' };
       await ocrExtractor.initialize();
-      
+
+      // Wait for OCR worker to be idle before extraction
+      let status = ocrExtractor.getStatus();
+
+      if (status === 'loading') {
+        ocrProcessing = { status: 'loading', message: 'Waiting for OCR engine to be ready...' };
+
+        const maxWaitTime = 30000; // 30 seconds max
+        const pollInterval = 100; // 100ms intervals
+        let waitedTime = 0;
+
+        while (status === 'loading' && waitedTime < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          waitedTime += pollInterval;
+          const newStatus = ocrExtractor.getStatus();
+
+          if (newStatus !== 'loading') {
+            status = newStatus;
+            break;
+          }
+        }
+
+        if (status === 'loading') {
+          ocrProcessing = {
+            status: 'error',
+            message: 'OCR initialization timed out after 30 seconds'
+          };
+          return;
+        }
+      }
+
+      if (status !== 'idle') {
+        ocrProcessing = {
+          status: 'error',
+          message: `OCR engine not ready. Current status: ${status}`
+        };
+        return;
+      }
+
       ocrProcessing = { status: 'processing', message: 'Extracting text...' };
       const result = await ocrExtractor.extractText({ imageElement: uploadedImage });
       
@@ -347,7 +415,45 @@
     try {
       ocrProcessing = { status: 'loading', message: 'Loading OCR engine...' };
       await ocrExtractor.initialize();
-      
+
+      // Wait for OCR worker to be idle before starting continuous OCR
+      let status = ocrExtractor.getStatus();
+
+      if (status === 'loading') {
+        ocrProcessing = { status: 'loading', message: 'Waiting for OCR engine to be ready...' };
+
+        const maxWaitTime = 30000; // 30 seconds max
+        const pollInterval = 100; // 100ms intervals
+        let waitedTime = 0;
+
+        while (status === 'loading' && waitedTime < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          waitedTime += pollInterval;
+          const newStatus = ocrExtractor.getStatus();
+
+          if (newStatus !== 'loading') {
+            status = newStatus;
+            break;
+          }
+        }
+
+        if (status === 'loading') {
+          ocrProcessing = {
+            status: 'error',
+            message: 'OCR initialization timed out after 30 seconds'
+          };
+          return;
+        }
+      }
+
+      if (status !== 'idle') {
+        ocrProcessing = {
+          status: 'error',
+          message: `OCR engine not ready. Current status: ${status}`
+        };
+        return;
+      }
+
       ocrProcessing = { status: 'processing', message: 'Running continuous OCR...' };
       isOCRRunning = true;
       
