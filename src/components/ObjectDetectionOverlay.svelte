@@ -176,18 +176,6 @@
   function closeMenu(): void {
     isSettingsPanelOpen = false;
   }
-
-  // Reactive updates for detector options
-  $effect(() => {
-    if (detector) {
-      detector.updateOptions({
-        minScore: confidenceValue / 100,
-        maxDetections: maxDetectionsValue,
-        showLabels,
-        showScores,
-      });
-    }
-  });
 </script>
 
 <div class="object-detection-overlay {className}">
