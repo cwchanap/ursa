@@ -488,7 +488,6 @@
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
         showCopyFeedbackMessage('Text copied to clipboard successfully!');
-        console.log('Text copied to clipboard:', text.substring(0, 50) + '...');
       } else {
         // Fallback for older browsers or non-secure contexts
         fallbackCopyToClipboard(text);
@@ -515,7 +514,6 @@
       const successful = document.execCommand('copy');
       if (successful) {
         showCopyFeedbackMessage('Text copied to clipboard successfully!');
-        console.log('Text copied to clipboard (fallback):', text.substring(0, 50) + '...');
       } else {
         throw new Error('execCommand returned false');
       }
