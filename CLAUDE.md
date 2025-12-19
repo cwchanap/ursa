@@ -4,9 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Ursa is an Astro-based web application that provides real-time AI object detection for images and live video streams using TensorFlow.js and the COCO-SSD model.
+Ursa is an Astro-based web application that provides real-time AI analysis for images and live video streams. It supports three analysis modes:
 
-**Tech Stack**: Astro 5.14.1, TypeScript, Tailwind CSS 4.x, TensorFlow.js 4.22.0 with WebGL backend, Bun package manager
+- **Object Detection**: Real-time object detection using TensorFlow.js COCO-SSD model
+- **Image Classification**: Scene/object classification using MobileNet
+- **OCR**: Text extraction using Tesseract.js
+
+**Tech Stack**: Astro 5.x, Svelte 5, TypeScript, Tailwind CSS 4.x, TensorFlow.js 4.22.0 (WebGL), Tesseract.js 6.x, Bun package manager
 
 ## Development Commands
 
@@ -15,6 +19,10 @@ Ursa is an Astro-based web application that provides real-time AI object detecti
 bun run dev          # Start dev server on port 4321
 bun run build        # Production build
 bun run preview      # Preview production build
+
+# Testing
+bun run test         # Run tests (Vitest)
+bun run test:watch   # Watch mode for tests
 
 # Code Quality
 bun run lint         # Run ESLint (TypeScript + Astro)
@@ -26,44 +34,63 @@ bun run lint:fix     # Auto-fix linting issues
 
 ## Architecture Patterns
 
+### Component Framework
+
+UI components are built with **Svelte 5** (not Astro components):
+
+```
+src/components/
+├── MediaViewer.svelte           # Main media display & controls
+├── ObjectDetectionOverlay.svelte # Detection bounding boxes
+├── ClassificationResults.svelte  # Classification predictions
+├── OCROverlay.svelte            # OCR text region highlights
+├── OCRResults.svelte            # Extracted text display
+├── AnalysisModeTabs.svelte      # Mode switching UI
+└── Button.svelte                # Reusable button component
+```
+
+Astro is used only for pages and layouts (`src/pages/`, `src/layouts/`).
+
+### State Management with Svelte Stores
+
+Global state is managed via Svelte writable stores in `src/lib/stores/analysisState.ts`:
+
+```typescript
+import { analysisState, setActiveMode, setDetectionResults } from '@/lib/stores/analysisState';
+
+// Switch modes
+setActiveMode('classification');
+
+// Update results
+setDetectionResults({ objects: [...], inferenceTime: 150 });
+
+// Derived stores for reactive access
+import { activeMode, isAnyProcessing, detectionResults } from '@/lib/stores/analysisState';
+```
+
+Key state actions: `setActiveMode()`, `setProcessingStatus()`, `setDetectionResults()`, `setClassificationResults()`, `setOCRResults()`, `clearAllResults()`, `resetAnalysisState()`
+
 ### TensorFlow.js CDN Integration
 
-**Critical**: TensorFlow.js is loaded via CDN, NOT npm imports. This pattern is used throughout the codebase:
+**Critical**: TensorFlow.js is loaded via CDN, NOT npm imports. This pattern is used throughout:
 
 ```typescript
 // Global declarations for CDN-loaded libraries
 declare const tf: any;
 declare const cocoSsd: any;
+declare const mobilenet: any;
 
 // Model initialization pattern
 await tf.setBackend('webgl');
 await tf.ready();
-this.model = await cocoSsd.load({
-  base: 'lite_mobilenet_v2', // Performance-optimized
-});
+this.model = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
 ```
 
-Always check `objectDetector.getStatus()` before running detection since model loading is async.
-
-### Component Communication via Window Object
-
-Components communicate using global window assignments rather than props/events:
-
-```typescript
-// In lib files - create singleton
-export const objectDetector = new ObjectDetection();
-
-// In components - attach to window
-Object.assign(window, {
-  detectionOverlay: new ObjectDetectionOverlay(),
-});
-```
-
-This pattern is intentional for Astro's multi-page architecture.
+Always check service `getStatus()` or `isReady()` before running inference since model loading is async.
 
 ### Canvas Overlay System
 
-Detection results are rendered on dynamically created canvas overlays:
+Detection and OCR results are rendered on dynamically created canvas overlays:
 
 - Canvas elements are positioned absolutely over media elements
 - Coordinates are scaled from detection bbox to canvas dimensions
@@ -79,24 +106,26 @@ const scaleY = canvas.height / imageHeight;
 
 ```
 src/
-├── components/        # Astro components (PascalCase)
-│   ├── MediaViewer.astro
-│   ├── ObjectDetectionOverlay.astro
-│   └── Button.astro
-├── lib/              # TypeScript utilities (camelCase)
-│   ├── objectDetection.ts          # Core detection engine
-│   ├── objectDetectionOverlay.ts   # UI controls & results
-│   └── utils.ts
+├── components/       # Svelte components (PascalCase)
+├── lib/
+│   ├── objectDetection.ts       # COCO-SSD detection engine
+│   ├── imageClassification.ts   # MobileNet classification
+│   ├── ocrExtraction.ts         # Tesseract.js OCR
+│   ├── stores/analysisState.ts  # Global Svelte store
+│   ├── types/analysis.ts        # TypeScript type definitions
+│   ├── errors/                  # Custom error classes
+│   └── utils/                   # Utility functions (bboxUtils, memoryMonitor)
 ├── pages/            # Astro routes
-├── layouts/          # Layout components
-└── styles/           # Global CSS
+├── layouts/          # Astro layout components
+├── styles/           # Global CSS
+└── tests/            # Test files (*.test.ts)
 
 .specify/             # SpecKit workflow templates
 ├── templates/        # Spec, plan, tasks templates
 ├── scripts/          # Workflow automation
-└── memory/          # Project constitution
+└── memory/           # Project constitution
 
-.claude/commands/     # Claude Code slash commands (symlinked to .github/agents/)
+.claude/commands/     # Claude Code slash commands
 ```
 
 **Naming Convention**: Detection-related files must be prefixed with "object" or "detection".
@@ -105,7 +134,7 @@ src/
 
 ### 1. Performance First
 
-- Video detection FPS capped at 5-10 (set via `startVideoDetection()`)
+- Video detection FPS capped at 5-10 (set via `startVideoStream()`)
 - Large images scaled via CSS `max-height: 400px`
 - Always use WebGL backend for TensorFlow.js
 - Include `dispose()` methods for memory cleanup
@@ -118,10 +147,11 @@ Required cleanup patterns:
 - Stop video streams via `MediaStreamTrack.stop()`
 - Remove dynamically created canvas elements
 - Remove event listeners on unmount
+- Use `resetAnalysisState()` to clear intervals
 
 ### 3. TypeScript Strictness
 
-- Explicit `any` allowed ONLY for TensorFlow.js globals (`tf`, `cocoSsd`)
+- Explicit `any` allowed ONLY for TensorFlow.js globals (`tf`, `cocoSsd`, `mobilenet`)
 - All public functions need explicit return types
 - Type assertions should include explanatory comments
 - ESLint allows `any` as warnings (see `eslint.config.js:44`)
@@ -179,6 +209,7 @@ Example: `import { cn } from '@/lib/utils'`
 3. **Camera needs HTTPS** - Local dev works, production requires SSL
 4. **Canvas sizing** - Must match media element's `getBoundingClientRect()`, not natural dimensions
 5. **Husky pre-commit** - Runs lint-staged automatically (see `.lintstagedrc.json`)
+6. **Svelte 5 runes** - Use `$state`, `$derived`, `$effect` for reactivity in `.svelte` files
 
 ## Performance Targets
 
@@ -188,12 +219,3 @@ Example: `import { cn } from '@/lib/utils'`
 - Time to first detection: <8s from page load
 
 Use browser DevTools Memory panel to verify no leaks during development.
-
-## Active Technologies
-
-- TypeScript 5.x (Astro 5.14.1 framework) (001-image-classification-ocr)
-- Browser-side only (no backend persistence) (001-image-classification-ocr)
-
-## Recent Changes
-
-- 001-image-classification-ocr: Added TypeScript 5.x (Astro 5.14.1 framework)
