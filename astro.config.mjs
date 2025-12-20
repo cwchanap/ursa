@@ -30,7 +30,7 @@ export default defineConfig({
 			},
 		},
 		optimizeDeps: {
-			include: ['@tensorflow/tfjs', '@tensorflow/tfjs-backend-webgl', '@tensorflow-models/mobilenet'],
+			include: ['@tensorflow/tfjs', '@tensorflow/tfjs-backend-webgl', '@tensorflow-models/coco-ssd', '@tensorflow-models/mobilenet'],
 			esbuildOptions: {
 				target: 'esnext',
 			},
