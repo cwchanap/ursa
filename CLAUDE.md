@@ -20,9 +20,10 @@ bun run dev          # Start dev server on port 4321
 bun run build        # Production build
 bun run preview      # Preview production build
 
-# Testing
-bun run test         # Run tests (Vitest)
-bun run test:watch   # Watch mode for tests
+# Testing (Vitest with happy-dom)
+bun run test                     # Run all tests
+bun run test:watch               # Watch mode
+bun test src/components/Button   # Run single test file (partial match)
 
 # Code Quality
 bun run lint         # Run ESLint (TypeScript + Astro)
@@ -40,12 +41,13 @@ UI components are built with **Svelte 5** (not Astro components):
 
 ```
 src/components/
-├── MediaViewer.svelte           # Main media display & controls
-├── ObjectDetectionOverlay.svelte # Detection bounding boxes
-├── ClassificationResults.svelte  # Classification predictions
+├── MediaViewer.svelte           # Main media display, drag-drop, camera access
+├── AnalysisModeTabs.svelte      # Mode switching UI (detection/classification/OCR)
+├── ObjectDetectionOverlay.svelte # Detection bounding boxes & controls
+├── ClassificationResults.svelte  # MobileNet prediction display
 ├── OCROverlay.svelte            # OCR text region highlights
 ├── OCRResults.svelte            # Extracted text display
-├── AnalysisModeTabs.svelte      # Mode switching UI
+├── PerformanceMonitor.svelte    # Real-time FPS & memory stats
 └── Button.svelte                # Reusable button component
 ```
 
@@ -70,21 +72,27 @@ import { activeMode, isAnyProcessing, detectionResults } from '@/lib/stores/anal
 
 Key state actions: `setActiveMode()`, `setProcessingStatus()`, `setDetectionResults()`, `setClassificationResults()`, `setOCRResults()`, `clearAllResults()`, `resetAnalysisState()`
 
-### TensorFlow.js CDN Integration
+### TensorFlow.js Integration
 
-**Critical**: TensorFlow.js is loaded via CDN, NOT npm imports. This pattern is used throughout:
+TensorFlow.js is loaded via **npm packages** (not CDN). Vite's `optimizeDeps` pre-bundles them to avoid browser hanging during model loading:
 
 ```typescript
-// Global declarations for CDN-loaded libraries
-declare const tf: any;
-declare const cocoSsd: any;
-declare const mobilenet: any;
+// Standard npm imports - see src/lib/objectDetection.ts
+import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
+import * as cocoSsd from '@tensorflow-models/coco-ssd';
 
 // Model initialization pattern
 await tf.setBackend('webgl');
 await tf.ready();
 this.model = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
 ```
+
+**Important Vite config** (`astro.config.mjs`):
+
+- `optimizeDeps.include` lists all TensorFlow packages for pre-bundling
+- `node-fetch` is aliased to a browser shim at `src/lib/shims/node-fetch-browser.ts`
+- `global` is defined as `globalThis` for TensorFlow.js compatibility
 
 Always check service `getStatus()` or `isReady()` before running inference since model loading is async.
 
@@ -151,7 +159,7 @@ Required cleanup patterns:
 
 ### 3. TypeScript Strictness
 
-- Explicit `any` allowed ONLY for TensorFlow.js globals (`tf`, `cocoSsd`, `mobilenet`)
+- Explicit `any` allowed ONLY for TensorFlow.js model returns and prediction types
 - All public functions need explicit return types
 - Type assertions should include explanatory comments
 - ESLint allows `any` as warnings (see `eslint.config.js:44`)
@@ -165,10 +173,25 @@ All failures must be user-friendly:
 - Detection failures → UI remains functional
 - Check WebGL availability before ML operations
 
+## Testing Patterns
+
+Tests use **Vitest** with **happy-dom** and **@testing-library/svelte**:
+
+```typescript
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/svelte';
+import MyComponent from './MyComponent.svelte';
+
+// Mock external dependencies
+vi.mock('canvas-confetti', () => ({ default: vi.fn() }));
+```
+
+Test files are co-located with components (e.g., `Button.svelte` → `Button.test.ts`).
+
 ## ESLint Configuration
 
 - Custom flat config for Astro + TypeScript
-- `MediaViewer.astro` temporarily ignored (see `eslint.config.js:18`)
+- Svelte files temporarily ignored (see `eslint.config.js:18`)
 - Unused vars with `_` prefix are ignored
 - `no-console` is warning-level (not error)
 
@@ -204,7 +227,7 @@ Example: `import { cn } from '@/lib/utils'`
 
 ## Common Gotchas
 
-1. **Don't import TensorFlow.js** - It's CDN-loaded, use `declare const` instead
+1. **TensorFlow.js uses npm imports** - Not CDN; see `astro.config.mjs` for Vite optimizations
 2. **First detection takes ~13MB** - COCO-SSD model downloads on first load
 3. **Camera needs HTTPS** - Local dev works, production requires SSL
 4. **Canvas sizing** - Must match media element's `getBoundingClientRect()`, not natural dimensions
