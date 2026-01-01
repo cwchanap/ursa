@@ -4,7 +4,9 @@
       "Bash(bun run lint:*)",
       "Skill(frontend-design:frontend-design)",
       "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
-      "Bash(.specify/scripts/bash/setup-plan.sh:*)"
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "Bash(bun run build:*)",
+      "Bash(bun run test:*)"
     ],
     "deny": [],
     "ask": []

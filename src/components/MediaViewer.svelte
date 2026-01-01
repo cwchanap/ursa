@@ -1,11 +1,16 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import ObjectDetectionOverlay from './ObjectDetectionOverlay.svelte';
   import ClassificationResults from './ClassificationResults.svelte';
   import OCRResults from './OCRResults.svelte';
   import AnalysisModeTabs from './AnalysisModeTabs.svelte';
   import PerformanceMonitor from './PerformanceMonitor.svelte';
+  import HistoryPanel from './HistoryPanel.svelte';
+  import ExportPanel from './ExportPanel.svelte';
   import type { AnalysisMode, ProcessingState, ClassificationAnalysis, OCRAnalysis, DetectionResult } from '../lib/types/analysis';
+  import type { HistoryEntry } from '../lib/types/history';
+  import { addToHistory, createHistoryEntryInput, clearSelection, selectedEntry } from '../lib/stores/historyStore';
+  import { videoFPS, detectionSettings } from '../lib/stores/settingsStore';
 
   // Type for window.detectionOverlay
   interface DetectionOverlayGlobal {
@@ -52,6 +57,88 @@
   let isDragOver = $state(false);
   let copyFeedbackMessage = $state('');
   let showCopyFeedback = $state(false);
+
+  // History viewing mode (read-only when viewing from history)
+  let isViewingHistory = $state(false);
+
+  // Handle restoring from history
+  async function handleRestoreFromHistory(entry: HistoryEntry): Promise<void> {
+    // Switch to image mode
+    currentMode = 'image';
+    stopCamera();
+    stopVideoObjectDetection();
+    stopAllVideoAnalysis();
+
+    // Set viewing history mode (read-only)
+    isViewingHistory = true;
+
+    // Clear previous results
+    clearAllAnalysisResults();
+
+    // Show image display first to render the img element
+    showImageDisplay = true;
+
+    // Wait for DOM to update so uploadedImage is available
+    await tick();
+
+    // Load and display the image
+    if (uploadedImage) {
+      // Create a promise to wait for the image to load
+      const imageLoaded = new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          uploadedImage!.src = entry.imageDataURL;
+          resolve();
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = entry.imageDataURL;
+      });
+
+      try {
+        await imageLoaded;
+
+        // Restore results based on analysis type
+        switch (entry.analysisType) {
+          case 'detection':
+            detectionResults = entry.results as DetectionResult;
+            activeAnalysisMode = 'detection';
+            break;
+          case 'classification':
+            classificationResults = entry.results as ClassificationAnalysis;
+            classificationProcessing = { status: 'complete' };
+            activeAnalysisMode = 'classification';
+            break;
+          case 'ocr':
+            ocrResults = entry.results as OCRAnalysis;
+            ocrProcessing = { status: 'complete' };
+            activeAnalysisMode = 'ocr';
+            break;
+        }
+      } catch (error) {
+        console.error('Failed to restore history entry:', error);
+        showImageDisplay = false;
+        isViewingHistory = false;
+      }
+    }
+  }
+
+  // Auto-save analysis results to history (for image mode only)
+  async function saveToHistory(
+    analysisType: AnalysisMode,
+    results: DetectionResult | ClassificationAnalysis | OCRAnalysis
+  ): Promise<void> {
+    // Only save in image mode, not when viewing history
+    if (currentMode !== 'image' || isViewingHistory || !uploadedImage) {
+      return;
+    }
+
+    try {
+      const entryInput = await createHistoryEntryInput(uploadedImage, analysisType, results);
+      await addToHistory(entryInput);
+    } catch (error) {
+      console.error('Failed to save to history:', error);
+    }
+  }
 
   // Helper to get detection overlay from window
   function getDetectionOverlay(): DetectionOverlayGlobal | undefined {
@@ -190,7 +277,7 @@
       (result: any) => {
         console.log('Video detection result:', result);
       },
-      5 // 5 FPS for better performance
+      $videoFPS // Use FPS from settings
     );
   }
 
@@ -267,9 +354,12 @@
       
       classificationProcessing = { status: 'processing', message: 'Classifying image...' };
       const result = await imageClassifier.classify({ imageElement: uploadedImage });
-      
+
       classificationResults = result;
       classificationProcessing = { status: 'complete' };
+
+      // Auto-save to history
+      saveToHistory('classification', result);
     } catch (error) {
       console.error('Classification failed:', error);
       classificationProcessing = {
@@ -328,7 +418,7 @@
           classificationResults = result;
           classificationProcessing = { status: 'complete' };
         },
-        5 // 5 FPS
+        $videoFPS // Use FPS from settings
       );
     } catch (error) {
       console.error('Video classification failed:', error);
@@ -403,14 +493,17 @@
 
       ocrProcessing = { status: 'processing', message: 'Extracting text...' };
       const result = await ocrExtractor.extractText({ imageElement: uploadedImage });
-      
+
       ocrResults = result;
       ocrProcessing = { status: 'complete' };
+
+      // Auto-save to history
+      saveToHistory('ocr', result);
     } catch (error) {
       console.error('OCR failed:', error);
-      ocrProcessing = { 
-        status: 'error', 
-        message: error instanceof Error ? error.message : 'Text extraction failed' 
+      ocrProcessing = {
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Text extraction failed'
       };
     }
   }
@@ -472,7 +565,7 @@
           ocrResults = result;
           ocrProcessing = { status: 'complete' };
         },
-        5 // 5 FPS
+        $videoFPS // Use FPS from settings
       );
     } catch (error) {
       console.error('Video OCR failed:', error);
@@ -629,12 +722,16 @@
       imageInput.value = '';
     }
     showImageDisplay = false;
-    
+
+    // Exit history viewing mode
+    isViewingHistory = false;
+    clearSelection();
+
     // Clear all analysis results (FR-010 compliance)
     clearAllAnalysisResults();
     classificationProcessing = { status: 'idle' };
     ocrProcessing = { status: 'idle' };
-    
+
     // Clear any detection overlay
     if (imageContainer) {
       const overlay = imageContainer.querySelector('.detection-overlay');
@@ -1023,14 +1120,35 @@
 
               <!-- Analysis Results for Image Mode -->
               <div class="analysis-results">
-                <!-- Analysis Mode Tabs -->
-                <AnalysisModeTabs
-                  activeMode={activeAnalysisMode}
-                  onModeChange={handleAnalysisModeChange}
-                  hasDetectionResults={false}
-                  hasClassificationResults={classificationResults !== null}
-                  hasOCRResults={ocrResults !== null}
-                />
+                <!-- Analysis Mode Tabs + Export Panel -->
+                <div class="results-header-row">
+                  <AnalysisModeTabs
+                    activeMode={activeAnalysisMode}
+                    onModeChange={handleAnalysisModeChange}
+                    hasDetectionResults={detectionResults !== null}
+                    hasClassificationResults={classificationResults !== null}
+                    hasOCRResults={ocrResults !== null}
+                  />
+                  <ExportPanel
+                    activeMode={activeAnalysisMode}
+                    imageElement={uploadedImage}
+                    {detectionResults}
+                    {classificationResults}
+                    {ocrResults}
+                    detectionSettings={$detectionSettings}
+                  />
+                </div>
+
+                <!-- History Viewing Indicator -->
+                {#if isViewingHistory}
+                  <div class="history-viewing-banner">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                      <polyline points="12 6 12 12 16 14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Viewing from history (read-only)</span>
+                  </div>
+                {/if}
 
                 <!-- Conditional Results Display based on Active Mode (T033) -->
                 {#if activeAnalysisMode === 'detection'}
@@ -1059,12 +1177,21 @@
   {/if}
 
   <!-- Object Detection Overlay -->
-  <ObjectDetectionOverlay 
-    showControls={true} 
+  <ObjectDetectionOverlay
+    showControls={true}
     showStats={true}
-    onDetectionResult={(result) => detectionResults = result}
+    onDetectionResult={(result) => {
+      detectionResults = result;
+      // Auto-save to history for image mode
+      if (currentMode === 'image' && !isViewingHistory) {
+        saveToHistory('detection', result);
+      }
+    }}
   />
-  
+
+  <!-- History Panel (left slide-out) -->
+  <HistoryPanel onRestoreEntry={handleRestoreFromHistory} />
+
   <!-- Performance Monitor (dev mode only) -->
   <PerformanceMonitor
     classificationResult={classificationResults}
@@ -1589,6 +1716,42 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.5);
+}
+
+/* Results Header Row */
+.results-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* History Viewing Banner */
+.history-viewing-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.history-viewing-banner svg {
+  width: 18px;
+  height: 18px;
+  color: var(--cosmic-purple, #8b5cf6);
+  stroke-width: 2;
+}
+
+.history-viewing-banner span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.05em;
 }
 
 /* Error Alert */
