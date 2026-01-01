@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import type { DetectionResult } from '../lib/objectDetection.js';
+  import { settingsStore, detectionSettings, updateDetectionSettings } from '../lib/stores/settingsStore';
+  import SettingsFPSSlider from './SettingsFPSSlider.svelte';
 
   // Props
   interface Props {
@@ -24,12 +26,20 @@
   let currentMediaElement = $state<HTMLImageElement | HTMLVideoElement | null>(null);
   let currentContainer = $state<HTMLElement | null>(null);
 
-  // UI State
-  let confidenceValue = $state(50);
-  let maxDetectionsValue = $state(20);
-  let showLabels = $state(true);
-  let showScores = $state(true);
+  // UI State - now backed by settings store
+  let confidenceValue = $state($detectionSettings.confidenceThreshold);
+  let maxDetectionsValue = $state($detectionSettings.maxDetections);
+  let showLabels = $state($detectionSettings.showLabels);
+  let showScores = $state($detectionSettings.showScores);
   let isSettingsPanelOpen = $state(false);
+
+  // Sync local state with store changes (read from store)
+  $effect(() => {
+    confidenceValue = $detectionSettings.confidenceThreshold;
+    maxDetectionsValue = $detectionSettings.maxDetections;
+    showLabels = $detectionSettings.showLabels;
+    showScores = $detectionSettings.showScores;
+  });
 
   // Stats State
   let objectsCount = $state('-');
@@ -46,6 +56,7 @@
   let errorMessage = $state('An error occurred during object detection.');
   let isDetecting = $state(false);
 
+  // Update detector options when settings change
   $effect(() => {
     if (detector) {
       detector.updateOptions({
@@ -56,6 +67,33 @@
       });
     }
   });
+
+  // Handler functions for slider changes - save to store
+  function handleConfidenceChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const value = parseInt(target.value, 10);
+    confidenceValue = value;
+    updateDetectionSettings({ confidenceThreshold: value });
+  }
+
+  function handleMaxDetectionsChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const value = parseInt(target.value, 10);
+    maxDetectionsValue = value;
+    updateDetectionSettings({ maxDetections: value });
+  }
+
+  function handleShowLabelsChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    showLabels = target.checked;
+    updateDetectionSettings({ showLabels: target.checked });
+  }
+
+  function handleShowScoresChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    showScores = target.checked;
+    updateDetectionSettings({ showScores: target.checked });
+  }
 
   onMount(async () => {
     // Expose to window for MediaViewer integration immediately
@@ -264,7 +302,8 @@
             id="confidence-slider"
             min="10"
             max="95"
-            bind:value={confidenceValue}
+            value={confidenceValue}
+            oninput={handleConfidenceChange}
             class="cosmic-slider"
             aria-label="Confidence Threshold"
           >
@@ -284,7 +323,8 @@
             id="max-detections-slider"
             min="1"
             max="50"
-            bind:value={maxDetectionsValue}
+            value={maxDetectionsValue}
+            oninput={handleMaxDetectionsChange}
             class="cosmic-slider"
             aria-label="Max Detections"
           >
@@ -294,13 +334,18 @@
           </div>
         </div>
 
+        <!-- FPS Slider for Video Analysis -->
+        <div class="control-section fps-section">
+          <SettingsFPSSlider />
+        </div>
+
         <div class="control-toggles">
           <label class="toggle-item">
-            <input type="checkbox" bind:checked={showLabels} class="cosmic-checkbox">
+            <input type="checkbox" checked={showLabels} onchange={handleShowLabelsChange} class="cosmic-checkbox">
             <span class="toggle-label">Show Labels</span>
           </label>
           <label class="toggle-item">
-            <input type="checkbox" bind:checked={showScores} class="cosmic-checkbox">
+            <input type="checkbox" checked={showScores} onchange={handleShowScoresChange} class="cosmic-checkbox">
             <span class="toggle-label">Show Scores</span>
           </label>
         </div>
