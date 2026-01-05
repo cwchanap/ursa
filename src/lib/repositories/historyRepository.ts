@@ -24,7 +24,7 @@ import {
 
 export interface IHistoryRepository {
   getEntries(): HistoryEntry[];
-  addEntry(entry: HistoryEntryInput): HistoryEntry | null;
+  addEntry(entry: HistoryEntryInput): Promise<HistoryEntry | null>;
   deleteEntry(id: string): boolean;
   clearHistory(): void;
   isAvailable(): boolean;
@@ -301,25 +301,9 @@ export function getStorageUsage(): { used: number; available: number } | null {
 
 /**
  * History repository singleton
+ * All operations are async where needed (e.g., addEntry returns Promise)
  */
 export const historyRepository: IHistoryRepository = {
-  getEntries,
-  addEntry: (input) => {
-    // Return synchronously for interface compatibility
-    // Actual save happens asynchronously
-    addEntrySync(input);
-    return null;
-  },
-  deleteEntry,
-  clearHistory,
-  isAvailable,
-  getStorageUsage,
-};
-
-/**
- * Async version of the repository for direct use
- */
-export const historyRepositoryAsync = {
   getEntries,
   addEntry,
   deleteEntry,

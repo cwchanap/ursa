@@ -136,6 +136,11 @@ describe('historyRepository', () => {
     });
 
     it('returns false when localStorage unavailable', () => {
+      // Seed storage with an entry to ensure setItem is called during deletion
+      const entries = [createValidEntry('1')];
+      localStorageMock.setItem(HISTORY_STORAGE_KEY, JSON.stringify(entries));
+
+      // Mock setItem to throw on next call (during deleteEntry's saveEntries)
       localStorageMock.setItem.mockImplementationOnce(() => {
         throw new Error('Storage error');
       });
