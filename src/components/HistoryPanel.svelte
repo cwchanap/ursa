@@ -137,12 +137,9 @@
   $effect(() => {
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', handleKeydown);
-    }
-  });
-
-  onDestroy(() => {
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('keydown', handleKeydown);
+      return () => {
+        window.removeEventListener('keydown', handleKeydown);
+      };
     }
   });
 </script>

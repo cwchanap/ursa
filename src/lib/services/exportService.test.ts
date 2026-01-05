@@ -88,7 +88,8 @@ const classificationResults: ClassificationAnalysis = {
     { label: 'labrador', confidence: 0.05 },
   ],
   inferenceTime: 80,
-  timestamp: new Date().toISOString(),
+  timestamp: '2025-01-15T10:30:45.000Z',
+  imageDimensions: { width: 800, height: 600 },
 };
 
 const ocrResults: OCRAnalysis = {
@@ -98,18 +99,43 @@ const ocrResults: OCRAnalysis = {
   ],
   fullText: 'Hello World',
   processingTime: 500,
+  timestamp: '2025-01-15T10:30:45.000Z',
+  imageDimensions: { width: 800, height: 600 },
+  language: 'eng',
 };
 
 describe('exportService', () => {
+  // Store original global values for clipboard tests
+  let originalClipboard: Clipboard | undefined;
+  let originalIsSecureContextDescriptor: PropertyDescriptor | undefined;
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockCanvas.getContext.mockReturnValue(mockContext);
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2025-01-15T10:30:45.000Z'));
+
+    // Capture original clipboard and isSecureContext values
+    originalClipboard = (navigator as any).clipboard;
+    originalIsSecureContextDescriptor = Object.getOwnPropertyDescriptor(window, 'isSecureContext');
   });
 
   afterEach(() => {
     vi.useRealTimers();
+
+    // Restore original clipboard
+    if (originalClipboard !== undefined) {
+      (navigator as any).clipboard = originalClipboard;
+    } else {
+      delete (navigator as any).clipboard;
+    }
+
+    // Restore original isSecureContext descriptor
+    if (originalIsSecureContextDescriptor) {
+      Object.defineProperty(window, 'isSecureContext', originalIsSecureContextDescriptor);
+    } else {
+      delete (window as any).isSecureContext;
+    }
   });
 
   describe('exportDetectionImage', () => {

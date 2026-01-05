@@ -31,8 +31,8 @@ const createMockEntry = (
     type === 'detection'
       ? { objects: [], inferenceTime: 100 }
       : type === 'classification'
-        ? { predictions: [{ label: 'cat', confidence: 0.9 }], inferenceTime: 50 }
-        : { textRegions: [], fullText: 'test', processingTime: 200 },
+        ? { predictions: [{ label: 'cat', confidence: 0.9 }], inferenceTime: 50, timestamp: new Date().toISOString(), imageDimensions: { width: 800, height: 600 } }
+        : { textRegions: [], fullText: 'test', processingTime: 200, timestamp: new Date().toISOString(), imageDimensions: { width: 800, height: 600 }, language: 'eng' },
   imageDimensions: { width: 800, height: 600 },
 });
 
@@ -41,13 +41,20 @@ vi.mock('../repositories/historyRepository', () => ({
   getEntries: vi.fn(() => []),
   deleteEntry: vi.fn(() => true),
   clearHistory: vi.fn(),
-  historyRepositoryAsync: {
-    addEntry: vi.fn(async (input: HistoryEntryInput) => ({
-      ...input,
-      id: 'new-entry-id',
-      timestamp: new Date().toISOString(),
-    })),
+  historyRepository: {
+    addEntry: vi.fn(async (input: HistoryEntryInput) => {
+      const entry: HistoryEntry = {
+        ...input,
+        id: 'new-entry-id',
+        timestamp: new Date().toISOString(),
+      };
+      return entry;
+    }),
     getEntries: vi.fn(() => []),
+    deleteEntry: vi.fn(() => true),
+    clearHistory: vi.fn(),
+    isAvailable: vi.fn(() => true),
+    getStorageUsage: vi.fn(() => ({ used: 0, available: 5 * 1024 * 1024 })),
   },
 }));
 
@@ -55,7 +62,7 @@ import {
   getEntries,
   deleteEntry,
   clearHistory,
-  historyRepositoryAsync,
+  historyRepository,
 } from '../repositories/historyRepository';
 
 describe('historyStore', () => {
@@ -252,12 +259,12 @@ describe('historyStore', () => {
 
       const result = await addToHistory(input);
 
-      expect(historyRepositoryAsync.addEntry).toHaveBeenCalledWith(input);
+      expect(historyRepository.addEntry).toHaveBeenCalledWith(input);
       expect(result).not.toBeNull();
     });
 
     it('returns null on error', async () => {
-      vi.mocked(historyRepositoryAsync.addEntry).mockRejectedValueOnce(new Error('Failed'));
+      (historyRepository.addEntry as any).mockRejectedValueOnce(new Error('Failed'));
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const input: HistoryEntryInput = {

@@ -12,10 +12,10 @@ import { writable, derived, get } from 'svelte/store';
 import type { HistoryEntry, HistoryEntryInput, HistoryState } from '../types/history';
 import { INITIAL_HISTORY_STATE } from '../types/history';
 import {
+  historyRepository,
   getEntries,
   deleteEntry as repoDeleteEntry,
   clearHistory as repoClearHistory,
-  historyRepositoryAsync,
 } from '../repositories/historyRepository';
 
 // ============================================================================
@@ -113,7 +113,7 @@ export const hasSelectedEntry = derived(
  */
 export async function addToHistory(input: HistoryEntryInput): Promise<HistoryEntry | null> {
   try {
-    const entry = await historyRepositoryAsync.addEntry(input);
+    const entry = await historyRepository.addEntry(input);
 
     if (entry) {
       // Reload from repository to ensure consistency

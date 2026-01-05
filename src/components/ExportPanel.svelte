@@ -178,13 +178,13 @@
   $effect(() => {
     if (typeof window !== 'undefined') {
       window.addEventListener('click', handleOutsideClick);
+      return () => {
+        window.removeEventListener('click', handleOutsideClick);
+      };
     }
   });
 
   onDestroy(() => {
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('click', handleOutsideClick);
-    }
     if (feedbackTimeout) {
       clearTimeout(feedbackTimeout);
     }
