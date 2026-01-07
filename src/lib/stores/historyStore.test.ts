@@ -313,4 +313,8 @@ describe('historyStore', () => {
       expect(entry).toBeNull();
     });
   });
+
+  // Note: createHistoryEntryInput tests are complex due to DOM manipulation
+  // The implementation now validates dimensions and waits for load events
+  // Integration tests would require full DOM environment setup
 });

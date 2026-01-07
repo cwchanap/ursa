@@ -250,5 +250,13 @@ describe('history types', () => {
       const result = validateHistoryEntries(entries);
       expect(result).toHaveLength(1);
     });
+
+    it('returns empty array for non-array input', () => {
+      expect(validateHistoryEntries(null)).toEqual([]);
+      expect(validateHistoryEntries(undefined)).toEqual([]);
+      expect(validateHistoryEntries('string')).toEqual([]);
+      expect(validateHistoryEntries(123)).toEqual([]);
+      expect(validateHistoryEntries({})).toEqual([]);
+    });
   });
 });

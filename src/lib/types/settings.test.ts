@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   clampSetting,
   validateSettings,
+  validateLanguage,
+  validateFPSThresholds,
   DEFAULT_SETTINGS,
   DEFAULT_DETECTION_SETTINGS,
   DEFAULT_OCR_SETTINGS,
@@ -54,6 +56,55 @@ describe('settings types', () => {
       expect(SETTINGS_CONSTRAINTS.videoFPS.min).toBe(1);
       expect(SETTINGS_CONSTRAINTS.videoFPS.max).toBe(15);
     });
+
+    it('has valid FPS quality thresholds', () => {
+      expect(SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.low).toBe(3);
+      expect(SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.medium).toBe(7);
+      expect(SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.high).toBe(10);
+    });
+  });
+
+  describe('validateFPSThresholds', () => {
+    it('does not throw for valid thresholds', () => {
+      expect(() => validateFPSThresholds()).not.toThrow();
+    });
+
+    it('throws if low threshold is below min', () => {
+      const originalLow = SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.low;
+      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).low = 0;
+
+      expect(() => validateFPSThresholds()).toThrow(
+        /FPS quality thresholds.*must be within min-max range/
+      );
+
+      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).low = originalLow;
+    });
+
+    it('throws if high threshold is above max', () => {
+      const originalHigh = SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.high;
+      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).high = 20;
+
+      expect(() => validateFPSThresholds()).toThrow(
+        /FPS quality thresholds.*must be within min-max range/
+      );
+
+      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).high = originalHigh;
+    });
+
+    it('throws if thresholds are not in ascending order', () => {
+      const originalMedium = SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.medium;
+      const originalHigh = SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.high;
+
+      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).medium = 10;
+      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).high = 7;
+
+      expect(() => validateFPSThresholds()).toThrow(
+        /FPS quality thresholds must be in ascending order/
+      );
+
+      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).medium = originalMedium;
+      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).high = originalHigh;
+    });
   });
 
   describe('clampSetting', () => {
@@ -79,6 +130,40 @@ describe('settings types', () => {
       expect(clampSetting(-5, 'minConfidence')).toBe(0);
       expect(clampSetting(75, 'minConfidence')).toBe(75);
       expect(clampSetting(200, 'minConfidence')).toBe(100);
+    });
+  });
+
+  describe('validateLanguage', () => {
+    it('returns valid language code', () => {
+      expect(validateLanguage('eng')).toBe('eng');
+      expect(validateLanguage('spa')).toBe('spa');
+      expect(validateLanguage('fra')).toBe('fra');
+      expect(validateLanguage('deu')).toBe('deu');
+      expect(validateLanguage('chi_sim')).toBe('chi_sim');
+      expect(validateLanguage('jpn')).toBe('jpn');
+    });
+
+    it('returns default for null/undefined', () => {
+      expect(validateLanguage(null)).toBe(DEFAULT_OCR_SETTINGS.language);
+      expect(validateLanguage(undefined)).toBe(DEFAULT_OCR_SETTINGS.language);
+    });
+
+    it('returns default for non-string values', () => {
+      expect(validateLanguage(123)).toBe(DEFAULT_OCR_SETTINGS.language);
+      expect(validateLanguage({})).toBe(DEFAULT_OCR_SETTINGS.language);
+      expect(validateLanguage([])).toBe(DEFAULT_OCR_SETTINGS.language);
+    });
+
+    it('returns default for invalid language codes', () => {
+      expect(validateLanguage('invalid')).toBe(DEFAULT_OCR_SETTINGS.language);
+      expect(validateLanguage('xyz')).toBe(DEFAULT_OCR_SETTINGS.language);
+      expect(validateLanguage('')).toBe(DEFAULT_OCR_SETTINGS.language);
+    });
+
+    it('normalizes case and whitespace', () => {
+      expect(validateLanguage('ENG')).toBe('eng');
+      expect(validateLanguage('  spa  ')).toBe('spa');
+      expect(validateLanguage('FRA')).toBe('fra');
     });
   });
 
@@ -131,6 +216,31 @@ describe('settings types', () => {
       expect(result.detection.confidenceThreshold).toBe(100);
       expect(result.detection.maxDetections).toBe(50);
       expect(result.performance.videoFPS).toBe(15);
+    });
+
+    it('validates OCR language code', () => {
+      const input = {
+        ocr: {
+          language: 'invalid_lang',
+          minConfidence: 60,
+        },
+      };
+
+      const result = validateSettings(input);
+      expect(result.ocr.language).toBe(DEFAULT_OCR_SETTINGS.language);
+      expect(result.ocr.minConfidence).toBe(60);
+    });
+
+    it('normalizes valid language codes', () => {
+      const input = {
+        ocr: {
+          language: '  SPA  ',
+          minConfidence: 60,
+        },
+      };
+
+      const result = validateSettings(input);
+      expect(result.ocr.language).toBe('spa');
     });
 
     it('fills in missing nested properties with defaults', () => {

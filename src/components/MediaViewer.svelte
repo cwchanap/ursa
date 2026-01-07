@@ -60,6 +60,9 @@
 
   // History viewing mode (read-only when viewing from history)
   let isViewingHistory = $state(false);
+  
+  // Track if current image detection has been saved to history to prevent duplicates
+  let hasSavedCurrentImageDetection = $state(false);
 
   // Handle restoring from history
   async function handleRestoreFromHistory(entry: HistoryEntry): Promise<void> {
@@ -691,6 +694,9 @@
       return;
     }
 
+    // Reset detection save flag for new image
+    hasSavedCurrentImageDetection = false;
+
     // Clear previous analysis results (FR-010 compliance)
     clearAllAnalysisResults();
     classificationProcessing = { status: 'idle' };
@@ -722,6 +728,9 @@
       imageInput.value = '';
     }
     showImageDisplay = false;
+
+    // Reset detection save flag
+    hasSavedCurrentImageDetection = false;
 
     // Exit history viewing mode
     isViewingHistory = false;
@@ -1182,9 +1191,10 @@
     showStats={true}
     onDetectionResult={(result) => {
       detectionResults = result;
-      // Auto-save to history for image mode
-      if (currentMode === 'image' && !isViewingHistory) {
+      // Auto-save to history for image mode (only once per image to prevent duplicates)
+      if (currentMode === 'image' && !isViewingHistory && !hasSavedCurrentImageDetection) {
         saveToHistory('detection', result);
+        hasSavedCurrentImageDetection = true;
       }
     }}
   />

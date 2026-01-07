@@ -31,17 +31,19 @@
 
   // Get FPS quality label
   function getFPSLabel(fps: number): string {
-    if (fps <= 3) return 'Battery Saver';
-    if (fps <= 7) return 'Balanced';
-    if (fps <= 10) return 'Smooth';
+    const { low, medium, high } = SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds;
+    if (fps <= low) return 'Battery Saver';
+    if (fps <= medium) return 'Balanced';
+    if (fps <= high) return 'Smooth';
     return 'High Performance';
   }
 
   // Get FPS color class
   function getFPSColor(fps: number): string {
-    if (fps <= 3) return 'low';
-    if (fps <= 7) return 'medium';
-    if (fps <= 10) return 'high';
+    const { low, medium, high } = SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds;
+    if (fps <= low) return 'low';
+    if (fps <= medium) return 'medium';
+    if (fps <= high) return 'high';
     return 'ultra';
   }
 </script>
