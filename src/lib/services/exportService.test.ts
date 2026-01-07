@@ -123,11 +123,18 @@ describe('exportService', () => {
   afterEach(() => {
     vi.useRealTimers();
 
-    // Restore original clipboard
+    // Restore original clipboard using Object.defineProperty
     if (originalClipboard !== undefined) {
-      (navigator as any).clipboard = originalClipboard;
+      Object.defineProperty(navigator, 'clipboard', {
+        value: originalClipboard,
+        writable: true,
+        configurable: true,
+      });
     } else {
-      delete (navigator as any).clipboard;
+      Object.defineProperty(navigator, 'clipboard', {
+        get: () => undefined,
+        configurable: true,
+      });
     }
 
     // Restore original isSecureContext descriptor
@@ -225,7 +232,7 @@ describe('exportService', () => {
   });
 
   describe('exportClassificationImage', () => {
-    it('creates canvas and draws overlay', async () => {
+    it('creates canvas with extra space for overlay', async () => {
       mockCanvas.toBlob.mockImplementation((callback) => {
         callback(new Blob(['test'], { type: 'image/png' }));
       });
@@ -233,9 +240,23 @@ describe('exportService', () => {
       const imageElement = createMockImageElement();
       const result = await exportClassificationImage(imageElement, classificationResults);
 
+      expect(mockCanvas.width).toBe(800);
+      expect(mockCanvas.height).toBe(660); // 600 (image height) + 60 (overlay bar height)
       expect(result.success).toBe(true);
       expect(result.filename).toMatch(/ursa-classification-.*\.png/);
+    });
+
+    it('draws image and overlay', async () => {
+      mockCanvas.toBlob.mockImplementation((callback) => {
+        callback(new Blob(['test'], { type: 'image/png' }));
+      });
+
+      const imageElement = createMockImageElement();
+      const result = await exportClassificationImage(imageElement, classificationResults);
+
+      expect(mockContext.drawImage).toHaveBeenCalled();
       expect(mockContext.fillRect).toHaveBeenCalled();
+      expect(result.success).toBe(true);
     });
   });
 

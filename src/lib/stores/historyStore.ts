@@ -201,8 +201,75 @@ export function createHistoryEntryInput(
   results: HistoryEntryInput['results']
 ): Promise<HistoryEntryInput> {
   return new Promise((resolve, reject) => {
+    const timeoutMs = 5000; // 5 second timeout
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let loadListener: (() => void) | null = null;
+
+    const cleanup = () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (loadListener !== null) {
+        if (imageElement instanceof HTMLImageElement) {
+          imageElement.removeEventListener('load', loadListener);
+        } else {
+          imageElement.removeEventListener('loadedmetadata', loadListener);
+        }
+        loadListener = null;
+      }
+    };
+
+    const processImage = () => {
+      try {
+        // Get image dimensions
+        const width =
+          imageElement instanceof HTMLVideoElement
+            ? imageElement.videoWidth
+            : imageElement.naturalWidth;
+        const height =
+          imageElement instanceof HTMLVideoElement
+            ? imageElement.videoHeight
+            : imageElement.naturalHeight;
+
+        // Validate dimensions are non-zero
+        if (width === 0 || height === 0) {
+          cleanup();
+          reject(new Error('Image/video dimensions are zero - element may not be loaded'));
+          return;
+        }
+
+        // Convert image to data URL
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          cleanup();
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+
+        ctx.drawImage(imageElement, 0, 0, width, height);
+
+        const imageDataURL = canvas.toDataURL('image/png');
+
+        cleanup();
+        resolve({
+          analysisType,
+          imageDataURL,
+          results,
+          imageDimensions: { width, height },
+        });
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
+    };
+
     try {
-      // Get image dimensions
+      // Check if element is already loaded
       const width =
         imageElement instanceof HTMLVideoElement
           ? imageElement.videoWidth
@@ -212,28 +279,30 @@ export function createHistoryEntryInput(
           ? imageElement.videoHeight
           : imageElement.naturalHeight;
 
-      // Convert image to data URL
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'));
+      if (width > 0 && height > 0) {
+        // Element is already loaded, process immediately
+        processImage();
         return;
       }
 
-      ctx.drawImage(imageElement, 0, 0, width, height);
+      // Element not loaded, wait for load event
+      loadListener = () => {
+        processImage();
+      };
 
-      const imageDataURL = canvas.toDataURL('image/png');
+      if (imageElement instanceof HTMLImageElement) {
+        imageElement.addEventListener('load', loadListener);
+      } else {
+        imageElement.addEventListener('loadedmetadata', loadListener);
+      }
 
-      resolve({
-        analysisType,
-        imageDataURL,
-        results,
-        imageDimensions: { width, height },
-      });
+      // Set timeout to reject if element never loads
+      timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('Timeout waiting for image/video to load'));
+      }, timeoutMs);
     } catch (error) {
+      cleanup();
       reject(error);
     }
   });

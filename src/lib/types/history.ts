@@ -129,6 +129,11 @@ export function isValidHistoryEntry(entry: unknown): entry is HistoryEntry {
 /**
  * Filter and validate an array of history entries
  */
-export function validateHistoryEntries(entries: unknown[]): HistoryEntry[] {
-  return entries.filter(isValidHistoryEntry);
+export function validateHistoryEntries(entries: unknown): HistoryEntry[] {
+  // Guard against non-array inputs
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  return (entries as unknown[]).filter(isValidHistoryEntry) as HistoryEntry[];
 }

@@ -29,7 +29,19 @@ export interface DetectionSettings {
  * OCR-related settings
  */
 export interface OCRSettings {
-  /** Language code for text extraction (default: 'eng') */
+  /**
+   * Language code for text extraction (default: 'eng')
+   *
+   * Supported Tesseract.js language codes:
+   * - 'eng': English
+   * - 'spa': Spanish
+   * - 'fra': French
+   * - 'deu': German
+   * - 'chi_sim': Simplified Chinese
+   * - 'jpn': Japanese
+   *
+   * @see https://github.com/naptha/tesseract.js/blob/master/docs/tesseract.js#languages
+   */
   language: string;
   /** Minimum confidence threshold 0-100 (default: 50) */
   minConfidence: number;
@@ -87,11 +99,37 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 export const SETTINGS_STORAGE_KEY = 'ursa-settings';
 
+/**
+ * Supported Tesseract.js language codes for OCR
+ * @see https://github.com/naptha/tesseract.js/blob/master/docs/tesseract.js#languages
+ */
+export const SUPPORTED_LANGUAGES = [
+  'eng', // English
+  'spa', // Spanish
+  'fra', // French
+  'deu', // German
+  'chi_sim', // Simplified Chinese
+  'jpn', // Japanese
+] as const;
+
+export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];
+
 export const SETTINGS_CONSTRAINTS = {
   confidenceThreshold: { min: 0, max: 100 },
   maxDetections: { min: 1, max: 50 },
   minConfidence: { min: 0, max: 100 },
-  videoFPS: { min: 1, max: 15 },
+  videoFPS: {
+    min: 1,
+    max: 15,
+    // Quality tier thresholds for FPS slider labels/colors
+    // Must be within min-max range and in ascending order
+    qualityThresholds: {
+      low: 3,      // ≤ 3: Battery Saver
+      medium: 7,   // ≤ 7: Balanced
+      high: 10,    // ≤ 10: Smooth
+      // > high: High Performance
+    } as const,
+  },
 } as const;
 
 // ============================================================================
@@ -99,7 +137,55 @@ export const SETTINGS_CONSTRAINTS = {
 // ============================================================================
 
 /**
- * Clamp a value to the valid range for a setting
+ * Validate and sanitize OCR language code
+ * Returns language if valid, otherwise returns default
+ */
+export function validateLanguage(language: unknown): string {
+  // Handle null/undefined
+  if (language === null || language === undefined) {
+    return DEFAULT_OCR_SETTINGS.language;
+  }
+
+  // Handle non-string values
+  if (typeof language !== 'string') {
+    return DEFAULT_OCR_SETTINGS.language;
+  }
+
+  // Check if language is in supported list
+  const normalizedLanguage = language.trim().toLowerCase();
+  if (SUPPORTED_LANGUAGES.includes(normalizedLanguage as SupportedLanguage)) {
+    return normalizedLanguage;
+  }
+
+  // Return default for invalid language codes
+  return DEFAULT_OCR_SETTINGS.language;
+}
+
+/**
+ * Validate FPS quality thresholds are within min-max range and in ascending order
+ * @throws Error if thresholds are invalid
+ */
+export function validateFPSThresholds(): void {
+  const { min, max, qualityThresholds } = SETTINGS_CONSTRAINTS.videoFPS;
+  const { low, medium, high } = qualityThresholds;
+
+  // Check thresholds are within min-max range
+  if (low < min || high > max) {
+    throw new Error(
+      `FPS quality thresholds [${low}, ${medium}, ${high}] must be within min-max range [${min}, ${max}]`
+    );
+  }
+
+  // Check thresholds are in ascending order
+  if (low >= medium || medium >= high) {
+    throw new Error(
+      `FPS quality thresholds must be in ascending order: low (${low}) < medium (${medium}) < high (${high})`
+    );
+  }
+}
+
+/**
+ * Clamp a value to a valid range for a setting
  */
 export function clampSetting(
   value: number,
@@ -127,7 +213,7 @@ export function validateSettings(settings: Partial<AppSettings>): AppSettings {
       showScores: settings.detection?.showScores ?? DEFAULT_DETECTION_SETTINGS.showScores,
     },
     ocr: {
-      language: settings.ocr?.language ?? DEFAULT_OCR_SETTINGS.language,
+      language: validateLanguage(settings.ocr?.language),
       minConfidence: clampSetting(
         settings.ocr?.minConfidence ?? DEFAULT_OCR_SETTINGS.minConfidence,
         'minConfidence'

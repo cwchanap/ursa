@@ -283,19 +283,19 @@ export async function exportClassificationImage(
     // Create canvas with extra space for overlay
     const canvas = document.createElement('canvas');
     canvas.width = width;
-    canvas.height = height;
+    canvas.height = height + DEFAULT_CLASSIFICATION_OVERLAY.barHeight;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       return { success: false, filename, error: 'Failed to get canvas context' };
     }
 
-    // Draw original image
+    // Draw original image at the top of the canvas
     drawMediaToCanvas(ctx, imageElement, width, height);
 
-    // Draw classification overlay
+    // Draw classification overlay in the extra space below the image
     if (options.includeOverlay !== false) {
-      drawClassificationOverlay(ctx, analysis, width, height);
+      drawClassificationOverlay(ctx, analysis, width, canvas.height);
     }
 
     // Convert to blob and download
