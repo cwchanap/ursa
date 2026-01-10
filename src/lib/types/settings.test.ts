@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   clampSetting,
   validateSettings,
@@ -65,45 +65,45 @@ describe('settings types', () => {
   });
 
   describe('validateFPSThresholds', () => {
+    let originalConstraints: typeof SETTINGS_CONSTRAINTS;
+
+    beforeEach(() => {
+      // Clone the original constraints to avoid mutating global state
+      originalConstraints = structuredClone(SETTINGS_CONSTRAINTS);
+    });
+
+    afterEach(() => {
+      // Restore original constraints after each test
+      Object.assign(SETTINGS_CONSTRAINTS, originalConstraints);
+    });
+
     it('does not throw for valid thresholds', () => {
       expect(() => validateFPSThresholds()).not.toThrow();
     });
 
     it('throws if low threshold is below min', () => {
-      const originalLow = SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.low;
       (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).low = 0;
 
       expect(() => validateFPSThresholds()).toThrow(
         /FPS quality thresholds.*must be within min-max range/
       );
-
-      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).low = originalLow;
     });
 
     it('throws if high threshold is above max', () => {
-      const originalHigh = SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.high;
       (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).high = 20;
 
       expect(() => validateFPSThresholds()).toThrow(
         /FPS quality thresholds.*must be within min-max range/
       );
-
-      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).high = originalHigh;
     });
 
     it('throws if thresholds are not in ascending order', () => {
-      const originalMedium = SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.medium;
-      const originalHigh = SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds.high;
-
       (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).medium = 10;
       (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).high = 7;
 
       expect(() => validateFPSThresholds()).toThrow(
         /FPS quality thresholds must be in ascending order/
       );
-
-      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).medium = originalMedium;
-      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).high = originalHigh;
     });
   });
 

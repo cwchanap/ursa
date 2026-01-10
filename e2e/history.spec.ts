@@ -69,10 +69,14 @@ test.describe('History Panel', () => {
     await expect(page.locator('.history-panel.open')).toBeVisible({ timeout: 5000 });
 
     // Wait for the panel to have history-count of 0
-    await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).toBeVisible(
+      { timeout: 5000 }
+    );
 
     // Should show empty state with the specific testid
-    await expect(page.locator('[data-testid="history-empty-state"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="history-empty-state"]')).toBeVisible({
+      timeout: 5000,
+    });
     await expect(page.locator('.empty-title')).toHaveText('No History Yet');
   });
 
@@ -83,7 +87,8 @@ test.describe('History Panel', () => {
         id: 'test-1',
         timestamp: new Date().toISOString(),
         analysisType: 'detection',
-        imageDataURL: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        imageDataURL:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         results: { objects: [], inferenceTime: 100 },
         imageDimensions: { width: 100, height: 100 },
       };
@@ -107,15 +112,20 @@ test.describe('History Panel', () => {
           id: 'test-1',
           timestamp: new Date().toISOString(),
           analysisType: 'detection',
-          imageDataURL: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-          results: { objects: [{ class: 'person', score: 0.9, bbox: [0, 0, 50, 50] }], inferenceTime: 100 },
+          imageDataURL:
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          results: {
+            objects: [{ class: 'person', score: 0.9, bbox: [0, 0, 50, 50] }],
+            inferenceTime: 100,
+          },
           imageDimensions: { width: 100, height: 100 },
         },
         {
           id: 'test-2',
           timestamp: new Date(Date.now() - 3600000).toISOString(),
           analysisType: 'classification',
-          imageDataURL: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          imageDataURL:
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
           results: { predictions: [{ label: 'cat', confidence: 0.85 }], inferenceTime: 50 },
           imageDimensions: { width: 200, height: 150 },
         },
@@ -138,7 +148,9 @@ test.describe('History Panel', () => {
     await expect(entries).toHaveCount(2, { timeout: 5000 });
 
     // First entry should show detection info
-    await expect(page.locator('.entry-item').first().locator('.entry-summary')).toContainText('1 object detected');
+    await expect(page.locator('.entry-item').first().locator('.entry-summary')).toContainText(
+      '1 object detected'
+    );
   });
 
   test('should delete entry when delete button is clicked', async ({ page }) => {
@@ -148,7 +160,8 @@ test.describe('History Panel', () => {
         id: 'test-1',
         timestamp: new Date().toISOString(),
         analysisType: 'detection',
-        imageDataURL: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        imageDataURL:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         results: { objects: [], inferenceTime: 100 },
         imageDimensions: { width: 100, height: 100 },
       };
@@ -167,24 +180,31 @@ test.describe('History Panel', () => {
     // Hover over entry to show delete button
     await page.locator('.entry-item').hover();
 
-    // Click delete with force to ensure click goes through
-    await page.locator('.entry-delete').click({ force: true });
+    // Wait for delete button to be visible, then click normally
+    const deleteButton = page.locator('.entry-delete');
+    await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
+    await deleteButton.click();
 
     // Wait for entry count to become 0 via the data attribute
-    await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).toBeVisible(
+      { timeout: 5000 }
+    );
 
     // Entry should be removed, show empty state
-    await expect(page.locator('[data-testid="history-empty-state"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="history-empty-state"]')).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test('should clear all history when confirmed', async ({ page }) => {
     // Inject multiple mock entries
     await page.evaluate(() => {
-      const entries = [1, 2, 3].map(i => ({
+      const entries = [1, 2, 3].map((i) => ({
         id: `test-${i}`,
         timestamp: new Date().toISOString(),
         analysisType: 'detection',
-        imageDataURL: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        imageDataURL:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         results: { objects: [], inferenceTime: 100 },
         imageDimensions: { width: 100, height: 100 },
       }));
@@ -197,7 +217,9 @@ test.describe('History Panel', () => {
     await expect(page.locator('.history-panel.open')).toBeVisible({ timeout: 5000 });
 
     // Wait for entries to load
-    await expect(page.locator('[data-testid="history-panel"][data-history-count="3"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="history-panel"][data-history-count="3"]')).toBeVisible(
+      { timeout: 5000 }
+    );
 
     // Click "Clear All History"
     await page.locator('.clear-all-button').click();
@@ -209,9 +231,13 @@ test.describe('History Panel', () => {
     await page.locator('.confirm-yes').click();
 
     // Wait for entry count to become 0
-    await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).toBeVisible(
+      { timeout: 5000 }
+    );
 
     // Should show empty state
-    await expect(page.locator('[data-testid="history-empty-state"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="history-empty-state"]')).toBeVisible({
+      timeout: 5000,
+    });
   });
 });

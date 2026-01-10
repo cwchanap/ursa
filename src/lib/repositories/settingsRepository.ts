@@ -65,8 +65,16 @@ export function loadSettings(): AppSettings {
 
     // Handle version migrations if needed
     if (parsed.version !== DEFAULT_SETTINGS.version) {
-      console.info(`Migrating settings from version ${parsed.version} to ${DEFAULT_SETTINGS.version}`);
+      console.info(
+        `Migrating settings from version ${parsed.version} to ${DEFAULT_SETTINGS.version}`
+      );
       // Future: Add migration logic here
+      // Ensure parsed has current version to prevent repeated migration
+      parsed.version = DEFAULT_SETTINGS.version;
+      // Persist migrated settings to prevent repeated migration logs
+      const migratedSettings = validateSettings(parsed);
+      saveSettings(migratedSettings);
+      return migratedSettings;
     }
 
     // Validate and fill in defaults for any missing fields

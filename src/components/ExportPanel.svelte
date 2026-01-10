@@ -254,11 +254,19 @@
           <div class="dropdown-divider"></div>
           <button class="dropdown-item" onclick={async () => {
             showDropdown = false;
-            if (ocrResults) {
-              const result = await exportService.exportOCRText(ocrResults);
-              if (result.success) {
-                showFeedback(`Exported: ${result.filename}`, 'success');
+            try {
+              if (ocrResults) {
+                const result = await exportService.exportOCRText(ocrResults);
+                if (result.success) {
+                  showFeedback(`Exported: ${result.filename}`, 'success');
+                } else {
+                  showFeedback(`Failed to export OCR text: ${result.error || 'Unknown error'}`, 'error');
+                }
               }
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Unknown error';
+              showFeedback(`Failed to export OCR text: ${message}`, 'error');
+              console.error('OCR export failed:', err);
             }
           }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">

@@ -7,7 +7,12 @@
  * @module lib/types/history
  */
 
-import type { AnalysisMode, DetectionResult, ClassificationAnalysis, OCRAnalysis } from './analysis';
+import type {
+  AnalysisMode,
+  DetectionResult,
+  ClassificationAnalysis,
+  OCRAnalysis,
+} from './analysis';
 
 // ============================================================================
 // History Entry Schema
@@ -112,18 +117,65 @@ export function isValidHistoryEntry(entry: unknown): entry is HistoryEntry {
 
   const e = entry as Partial<HistoryEntry>;
 
-  return (
-    typeof e.id === 'string' &&
-    typeof e.timestamp === 'string' &&
-    (e.analysisType === 'detection' || e.analysisType === 'classification' || e.analysisType === 'ocr') &&
-    typeof e.imageDataURL === 'string' &&
-    e.results !== null &&
-    typeof e.results === 'object' &&
-    e.imageDimensions !== null &&
-    typeof e.imageDimensions === 'object' &&
-    typeof e.imageDimensions.width === 'number' &&
-    typeof e.imageDimensions.height === 'number'
-  );
+  // Basic field validation
+  if (
+    typeof e.id !== 'string' ||
+    typeof e.timestamp !== 'string' ||
+    (e.analysisType !== 'detection' &&
+      e.analysisType !== 'classification' &&
+      e.analysisType !== 'ocr') ||
+    typeof e.imageDataURL !== 'string' ||
+    !e.results ||
+    typeof e.results !== 'object' ||
+    !e.imageDimensions ||
+    typeof e.imageDimensions !== 'object' ||
+    typeof e.imageDimensions.width !== 'number' ||
+    typeof e.imageDimensions.height !== 'number'
+  ) {
+    return false;
+  }
+
+  // Type-specific validation based on analysisType
+  const results = e.results as DetectionResult | ClassificationAnalysis | OCRAnalysis;
+
+  if (e.analysisType === 'detection') {
+    // Must have objects array with proper structure
+    return (
+      'objects' in results &&
+      Array.isArray(results.objects) &&
+      results.objects.every(
+        (obj) =>
+          typeof obj === 'object' &&
+          obj !== null &&
+          'class' in obj &&
+          'score' in obj &&
+          'bbox' in obj &&
+          Array.isArray(obj.bbox) &&
+          obj.bbox.length === 4
+      )
+    );
+  }
+
+  if (e.analysisType === 'classification') {
+    // Must have predictions array
+    return (
+      'predictions' in results &&
+      Array.isArray(results.predictions) &&
+      results.predictions.every(
+        (pred) =>
+          typeof pred === 'object' && pred !== null && 'label' in pred && 'confidence' in pred
+      )
+    );
+  }
+
+  if (e.analysisType === 'ocr') {
+    // Must have textRegions and fullText
+    return (
+      'textRegions' in results && 'fullText' in results && typeof results.fullText === 'string'
+    );
+  }
+
+  return false;
 }
 
 /**

@@ -73,6 +73,10 @@ function createSettingsStore() {
      * Reset to default settings
      */
     reset: () => {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        saveTimeout = null;
+      }
       resetToDefaults();
       set(DEFAULT_SETTINGS);
     },
@@ -104,34 +108,22 @@ export const settingsStore = createSettingsStore();
 /**
  * Detection settings only
  */
-export const detectionSettings = derived(
-  settingsStore,
-  ($settings) => $settings.detection
-);
+export const detectionSettings = derived(settingsStore, ($settings) => $settings.detection);
 
 /**
  * OCR settings only
  */
-export const ocrSettings = derived(
-  settingsStore,
-  ($settings) => $settings.ocr
-);
+export const ocrSettings = derived(settingsStore, ($settings) => $settings.ocr);
 
 /**
  * Performance settings only
  */
-export const performanceSettings = derived(
-  settingsStore,
-  ($settings) => $settings.performance
-);
+export const performanceSettings = derived(settingsStore, ($settings) => $settings.performance);
 
 /**
  * Video FPS setting (commonly accessed)
  */
-export const videoFPS = derived(
-  settingsStore,
-  ($settings) => $settings.performance.videoFPS
-);
+export const videoFPS = derived(settingsStore, ($settings) => $settings.performance.videoFPS);
 
 /**
  * Confidence threshold (commonly accessed)
