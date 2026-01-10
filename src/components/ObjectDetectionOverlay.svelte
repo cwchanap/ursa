@@ -69,29 +69,26 @@
   });
 
   // Handler functions for slider changes - save to store
+  // Note: Local state is updated via $effect, so we only call updateDetectionSettings()
   function handleConfidenceChange(event: Event): void {
     const target = event.target as HTMLInputElement;
     const value = parseInt(target.value, 10);
-    confidenceValue = value;
     updateDetectionSettings({ confidenceThreshold: value });
   }
 
   function handleMaxDetectionsChange(event: Event): void {
     const target = event.target as HTMLInputElement;
     const value = parseInt(target.value, 10);
-    maxDetectionsValue = value;
     updateDetectionSettings({ maxDetections: value });
   }
 
   function handleShowLabelsChange(event: Event): void {
     const target = event.target as HTMLInputElement;
-    showLabels = target.checked;
     updateDetectionSettings({ showLabels: target.checked });
   }
 
   function handleShowScoresChange(event: Event): void {
     const target = event.target as HTMLInputElement;
-    showScores = target.checked;
     updateDetectionSettings({ showScores: target.checked });
   }
 
