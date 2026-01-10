@@ -17,6 +17,13 @@ import {
   HISTORY_THUMBNAIL_QUALITY,
   validateHistoryEntries,
 } from '../types/history';
+import type {
+  DetectionResult,
+  ClassificationAnalysis,
+  OCRAnalysis,
+  DetectedObject,
+  OCRResult,
+} from '../types/analysis';
 
 // ============================================================================
 // Repository Interface
@@ -67,14 +74,32 @@ function generateId(): string {
 }
 
 /**
+ * Result of image compression including scale information
+ */
+export interface CompressionResult {
+  /** Compressed image data URL */
+  imageDataURL: string;
+  /** Scale factor applied (e.g., 0.5 for 50% size) */
+  scale: number;
+  /** New image dimensions after compression */
+  dimensions: {
+    width: number;
+    height: number;
+  };
+}
+
+/**
  * Compress an image data URL for storage
  * Resizes to max width and converts to JPEG
  *
  * @param dataURL - The image data URL to compress
  * @param timeoutMs - Timeout in milliseconds (default: 10s)
- * @returns Promise resolving to compressed data URL, or rejecting on timeout/error
+ * @returns Promise resolving to compression result with image and scale info
  */
-export function compressImageForStorage(dataURL: string, timeoutMs = 10000): Promise<string> {
+export function compressImageForStorage(
+  dataURL: string,
+  timeoutMs = 10000
+): Promise<CompressionResult> {
   return new Promise((resolve, reject) => {
     let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
     let img: HTMLImageElement | null = new Image();
@@ -126,7 +151,11 @@ export function compressImageForStorage(dataURL: string, timeoutMs = 10000): Pro
       try {
         const compressed = canvas.toDataURL('image/jpeg', HISTORY_THUMBNAIL_QUALITY);
         cleanup();
-        resolve(compressed);
+        resolve({
+          imageDataURL: compressed,
+          scale,
+          dimensions: { width, height },
+        });
       } catch (err) {
         cleanup();
         reject(new Error(`Failed to compress image: ${err}`));
@@ -207,8 +236,88 @@ function saveEntries(entries: HistoryEntry[]): boolean {
 }
 
 /**
+ * Scale detection bounding boxes by a given factor
+ */
+function scaleDetectionBBox(
+  bbox: [number, number, number, number],
+  scale: number
+): [number, number, number, number] {
+  return [
+    Math.round(bbox[0] * scale),
+    Math.round(bbox[1] * scale),
+    Math.round(bbox[2] * scale),
+    Math.round(bbox[3] * scale),
+  ];
+}
+
+/**
+ * Scale OCR bounding box by a given factor
+ */
+function scaleOCRBBox(
+  bbox: { x: number; y: number; width: number; height: number },
+  scale: number
+): { x: number; y: number; width: number; height: number } {
+  return {
+    x: Math.round(bbox.x * scale),
+    y: Math.round(bbox.y * scale),
+    width: Math.round(bbox.width * scale),
+    height: Math.round(bbox.height * scale),
+  };
+}
+
+/**
+ * Scale detection results to match compressed image
+ */
+function scaleDetectionResults(results: DetectionResult, scale: number): DetectionResult {
+  return {
+    ...results,
+    objects: results.objects.map(
+      (obj): DetectedObject => ({
+        ...obj,
+        bbox: scaleDetectionBBox(obj.bbox, scale),
+      })
+    ),
+  };
+}
+
+/**
+ * Scale OCR results to match compressed image
+ */
+function scaleOCRResults(results: OCRAnalysis, scale: number): OCRAnalysis {
+  return {
+    ...results,
+    textRegions: results.textRegions.map(
+      (region): OCRResult => ({
+        ...region,
+        bbox: region.bbox ? scaleOCRBBox(region.bbox, scale) : undefined,
+      })
+    ),
+    imageDimensions: {
+      width: Math.round(results.imageDimensions.width * scale),
+      height: Math.round(results.imageDimensions.height * scale),
+    },
+  };
+}
+
+/**
+ * Scale classification results to match compressed image
+ */
+function scaleClassificationResults(
+  results: ClassificationAnalysis,
+  scale: number
+): ClassificationAnalysis {
+  return {
+    ...results,
+    imageDimensions: {
+      width: Math.round(results.imageDimensions.width * scale),
+      height: Math.round(results.imageDimensions.height * scale),
+    },
+  };
+}
+
+/**
  * Add a new entry to history (FIFO queue)
- * Compresses image and generates ID/timestamp
+ * Compresses image and scales results to match compressed dimensions
  *
  * @returns The created entry, or null if failed
  */
@@ -220,23 +329,48 @@ export async function addEntry(input: HistoryEntryInput): Promise<HistoryEntry |
 
   try {
     // Compress image for storage
-    let compressedImage: string;
+    let compression: CompressionResult;
     try {
-      compressedImage = await compressImageForStorage(input.imageDataURL);
+      compression = await compressImageForStorage(input.imageDataURL);
     } catch (compressionError) {
       console.warn('Image compression failed, using original image:', compressionError);
-      compressedImage = input.imageDataURL;
+      // Fallback to original image with no scaling
+      compression = {
+        imageDataURL: input.imageDataURL,
+        scale: 1,
+        dimensions: input.imageDimensions,
+      };
     }
 
-    // Create full entry
+    // Scale results to match compressed image dimensions
+    let scaledResults: DetectionResult | ClassificationAnalysis | OCRAnalysis;
+    if (compression.scale !== 1) {
+      if (input.analysisType === 'detection') {
+        scaledResults = scaleDetectionResults(input.results as DetectionResult, compression.scale);
+      } else if (input.analysisType === 'ocr') {
+        scaledResults = scaleOCRResults(input.results as OCRAnalysis, compression.scale);
+      } else if (input.analysisType === 'classification') {
+        scaledResults = scaleClassificationResults(
+          input.results as ClassificationAnalysis,
+          compression.scale
+        );
+      } else {
+        scaledResults = input.results;
+      }
+    } else {
+      scaledResults = input.results;
+    }
+
+    // Create full entry with scaled results and compressed dimensions
+    // Use type assertion because TypeScript can't narrow the discriminated union
     const entry: HistoryEntry = {
       id: generateId(),
       timestamp: new Date().toISOString(),
       analysisType: input.analysisType,
-      imageDataURL: compressedImage,
-      results: input.results,
-      imageDimensions: input.imageDimensions,
-    };
+      imageDataURL: compression.imageDataURL,
+      results: scaledResults,
+      imageDimensions: compression.dimensions,
+    } as HistoryEntry;
 
     // Get existing entries
     const entries = getEntries();
