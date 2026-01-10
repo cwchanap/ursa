@@ -193,33 +193,57 @@ export function clampSetting(value: number, setting: keyof typeof SETTINGS_CONST
 }
 
 /**
+ * Parse and clamp a numeric setting, returning default for invalid values
+ */
+function parseAndClampSetting(
+  value: unknown,
+  setting: keyof typeof SETTINGS_CONSTRAINTS,
+  defaultValue: number
+): number {
+  // Coerce to number
+  const numValue = typeof value === 'number' ? value : Number(value);
+
+  // Return default if NaN
+  if (isNaN(numValue)) {
+    return defaultValue;
+  }
+
+  // Clamp to valid range
+  return clampSetting(numValue, setting);
+}
+
+/**
  * Validate and sanitize settings, filling in defaults for missing values
  */
 export function validateSettings(settings: Partial<AppSettings>): AppSettings {
   return {
     detection: {
-      confidenceThreshold: clampSetting(
-        settings.detection?.confidenceThreshold ?? DEFAULT_DETECTION_SETTINGS.confidenceThreshold,
-        'confidenceThreshold'
+      confidenceThreshold: parseAndClampSetting(
+        settings.detection?.confidenceThreshold,
+        'confidenceThreshold',
+        DEFAULT_DETECTION_SETTINGS.confidenceThreshold
       ),
-      maxDetections: clampSetting(
-        settings.detection?.maxDetections ?? DEFAULT_DETECTION_SETTINGS.maxDetections,
-        'maxDetections'
+      maxDetections: parseAndClampSetting(
+        settings.detection?.maxDetections,
+        'maxDetections',
+        DEFAULT_DETECTION_SETTINGS.maxDetections
       ),
       showLabels: settings.detection?.showLabels ?? DEFAULT_DETECTION_SETTINGS.showLabels,
       showScores: settings.detection?.showScores ?? DEFAULT_DETECTION_SETTINGS.showScores,
     },
     ocr: {
       language: validateLanguage(settings.ocr?.language),
-      minConfidence: clampSetting(
-        settings.ocr?.minConfidence ?? DEFAULT_OCR_SETTINGS.minConfidence,
-        'minConfidence'
+      minConfidence: parseAndClampSetting(
+        settings.ocr?.minConfidence,
+        'minConfidence',
+        DEFAULT_OCR_SETTINGS.minConfidence
       ),
     },
     performance: {
-      videoFPS: clampSetting(
-        settings.performance?.videoFPS ?? DEFAULT_PERFORMANCE_SETTINGS.videoFPS,
-        'videoFPS'
+      videoFPS: parseAndClampSetting(
+        settings.performance?.videoFPS,
+        'videoFPS',
+        DEFAULT_PERFORMANCE_SETTINGS.videoFPS
       ),
     },
     version: settings.version ?? DEFAULT_SETTINGS.version,

@@ -10,63 +10,63 @@ test.describe('History Panel', () => {
   });
 
   test('should display history toggle button', async ({ page }) => {
-    const historyToggle = page.locator('.history-toggle');
+    const historyToggle = page.locator('[data-testid="history-toggle"]');
     await expect(historyToggle).toBeVisible({ timeout: 10000 });
   });
 
   test('should open history panel when toggle is clicked', async ({ page }) => {
-    const historyToggle = page.locator('.history-toggle');
+    const historyToggle = page.locator('[data-testid="history-toggle"]');
     await expect(historyToggle).toBeVisible({ timeout: 10000 });
     await historyToggle.click();
 
     // Panel should be visible
-    const historyPanel = page.locator('.history-panel.open');
+    const historyPanel = page.locator('[data-testid="history-panel"]');
     await expect(historyPanel).toBeVisible({ timeout: 5000 });
 
     // Header should show "History"
-    await expect(page.locator('.header-title h2')).toHaveText('History');
+    await expect(page.locator('[data-testid="history-panel"] .header-title h2')).toHaveText('History');
   });
 
   test('should close history panel when close button is clicked', async ({ page }) => {
     // Open panel
-    await page.locator('.history-toggle').click();
-    await expect(page.locator('.history-panel.open')).toBeVisible({ timeout: 5000 });
+    await page.locator('[data-testid="history-toggle"]').click();
+    await expect(page.locator('[data-testid="history-panel"]')).toBeVisible({ timeout: 5000 });
 
     // Click close button
-    await page.locator('.close-button').click();
+    await page.locator('[data-testid="close-button"]').click();
 
-    // Panel should be closed (no .open class)
-    await expect(page.locator('.history-panel.open')).not.toBeVisible({ timeout: 5000 });
+    // Panel should be closed
+    await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).not.toBeVisible({ timeout: 5000 });
   });
 
   test('should close history panel when backdrop is clicked', async ({ page }) => {
     // Open panel
-    await page.locator('.history-toggle').click();
-    await expect(page.locator('.history-panel.open')).toBeVisible({ timeout: 5000 });
+    await page.locator('[data-testid="history-toggle"]').click();
+    await expect(page.locator('[data-testid="history-panel"]')).toBeVisible({ timeout: 5000 });
 
     // Click backdrop
     await page.locator('.history-backdrop').click();
 
     // Panel should be closed
-    await expect(page.locator('.history-panel.open')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).not.toBeVisible({ timeout: 5000 });
   });
 
   test('should close history panel with Escape key', async ({ page }) => {
     // Open panel
-    await page.locator('.history-toggle').click();
-    await expect(page.locator('.history-panel.open')).toBeVisible({ timeout: 5000 });
+    await page.locator('[data-testid="history-toggle"]').click();
+    await expect(page.locator('[data-testid="history-panel"]')).toBeVisible({ timeout: 5000 });
 
     // Press Escape
     await page.keyboard.press('Escape');
 
     // Panel should be closed
-    await expect(page.locator('.history-panel.open')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).not.toBeVisible({ timeout: 5000 });
   });
 
   test('should show empty state when no history', async ({ page }) => {
     // Open panel
-    await page.locator('.history-toggle').click();
-    await expect(page.locator('.history-panel.open')).toBeVisible({ timeout: 5000 });
+    await page.locator('[data-testid="history-toggle"]').click();
+    await expect(page.locator('[data-testid="history-panel"]')).toBeVisible({ timeout: 5000 });
 
     // Wait for the panel to have history-count of 0
     await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).toBeVisible(
@@ -77,7 +77,7 @@ test.describe('History Panel', () => {
     await expect(page.locator('[data-testid="history-empty-state"]')).toBeVisible({
       timeout: 5000,
     });
-    await expect(page.locator('.empty-title')).toHaveText('No History Yet');
+    await expect(page.locator('[data-testid="empty-title"]')).toHaveText('No History Yet');
   });
 
   test('should show entry count badge when history exists', async ({ page }) => {
@@ -100,7 +100,7 @@ test.describe('History Panel', () => {
     await page.waitForLoadState('networkidle');
 
     // Badge should show 1
-    const badge = page.locator('.toggle-badge');
+    const badge = page.locator('[data-testid="history-toggle"] .toggle-badge');
     await expect(badge).toHaveText('1', { timeout: 10000 });
   });
 
@@ -137,18 +137,18 @@ test.describe('History Panel', () => {
     await page.waitForLoadState('networkidle');
 
     // Open panel
-    await page.locator('.history-toggle').click();
-    await expect(page.locator('.history-panel.open')).toBeVisible({ timeout: 5000 });
+    await page.locator('[data-testid="history-toggle"]').click();
+    await expect(page.locator('[data-testid="history-panel"]')).toBeVisible({ timeout: 5000 });
 
     // Wait for entry list to be visible with entries
     await expect(page.locator('[data-testid="history-entry-list"]')).toBeVisible({ timeout: 5000 });
 
     // Should show 2 entries
-    const entries = page.locator('.entry-item');
+    const entries = page.locator('[data-testid="entry-item"]');
     await expect(entries).toHaveCount(2, { timeout: 5000 });
 
     // First entry should show detection info
-    await expect(page.locator('.entry-item').first().locator('.entry-summary')).toContainText(
+    await expect(page.locator('[data-testid="entry-item"]').first().locator('[data-testid="entry-summary"]')).toContainText(
       '1 object detected'
     );
   });
@@ -170,18 +170,18 @@ test.describe('History Panel', () => {
 
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.locator('.history-toggle').click();
-    await expect(page.locator('.history-panel.open')).toBeVisible({ timeout: 5000 });
+    await page.locator('[data-testid="history-toggle"]').click();
+    await expect(page.locator('[data-testid="history-panel"]')).toBeVisible({ timeout: 5000 });
 
     // Wait for entry to be visible
     await expect(page.locator('[data-testid="history-entry-list"]')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('.entry-item')).toHaveCount(1);
+    await expect(page.locator('[data-testid="entry-item"]')).toHaveCount(1);
 
     // Hover over entry to show delete button
-    await page.locator('.entry-item').hover();
+    await page.locator('[data-testid="entry-item"]').hover();
 
     // Wait for delete button to be visible, then click normally
-    const deleteButton = page.locator('.entry-delete');
+    const deleteButton = page.locator('[data-testid="entry-delete"]');
     await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
     await deleteButton.click();
 
@@ -213,8 +213,8 @@ test.describe('History Panel', () => {
 
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.locator('.history-toggle').click();
-    await expect(page.locator('.history-panel.open')).toBeVisible({ timeout: 5000 });
+    await page.locator('[data-testid="history-toggle"]').click();
+    await expect(page.locator('[data-testid="history-panel"]')).toBeVisible({ timeout: 5000 });
 
     // Wait for entries to load
     await expect(page.locator('[data-testid="history-panel"][data-history-count="3"]')).toBeVisible(
@@ -222,13 +222,13 @@ test.describe('History Panel', () => {
     );
 
     // Click "Clear All History"
-    await page.locator('.clear-all-button').click();
+    await page.locator('[data-testid="clear-all-button"]').click();
 
     // Confirm dialog should appear
-    await expect(page.locator('.confirm-clear')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="confirm-clear"]')).toBeVisible({ timeout: 5000 });
 
     // Confirm
-    await page.locator('.confirm-yes').click();
+    await page.locator('[data-testid="confirm-yes"]').click();
 
     // Wait for entry count to become 0
     await expect(page.locator('[data-testid="history-panel"][data-history-count="0"]')).toBeVisible(

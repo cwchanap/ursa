@@ -145,6 +145,7 @@
 
 <!-- Toggle Button (Bottom Left) -->
 <button
+  data-testid="history-toggle"
   class="history-toggle {$hasHistory ? 'has-items' : ''}"
   onclick={togglePanel}
   aria-label="Toggle history panel"
@@ -182,7 +183,7 @@
       <h2>History</h2>
       <span class="entry-count">{$historyCount}/10</span>
     </div>
-    <button class="close-button" onclick={closePanel} aria-label="Close panel">
+    <button data-testid="close-button" class="close-button" onclick={closePanel} aria-label="Close panel">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
         <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
@@ -196,6 +197,7 @@
       <div class="entry-list" data-testid="history-entry-list">
         {#each $historyEntries as entry (entry.id)}
           <div
+            data-testid="entry-item"
             class="entry-item {$selectedEntry?.id === entry.id ? 'selected' : ''}"
             onclick={() => handleEntryClick(entry)}
             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleEntryClick(entry); } }}
@@ -207,11 +209,12 @@
               <span class="mode-badge {getModeColor(entry)}">{getModeLabel(entry)}</span>
             </div>
             <div class="entry-info">
-              <span class="entry-summary">{getResultSummary(entry)}</span>
+              <span data-testid="entry-summary" class="entry-summary">{getResultSummary(entry)}</span>
               <span class="entry-time">{formatTimestamp(entry.timestamp)}</span>
               <span class="entry-dimensions">{entry.imageDimensions.width}×{entry.imageDimensions.height}</span>
             </div>
             <button
+              data-testid="entry-delete"
               class="entry-delete"
               onclick={(e) => handleDeleteEntry(e, entry.id)}
               aria-label="Delete entry"
@@ -227,15 +230,15 @@
       <!-- Clear All -->
       <div class="panel-footer">
         {#if confirmClearOpen}
-          <div class="confirm-clear">
+          <div data-testid="confirm-clear" class="confirm-clear">
             <span>Clear all history?</span>
             <div class="confirm-buttons">
-              <button class="confirm-yes" onclick={handleClearAll}>Yes, clear</button>
-              <button class="confirm-no" onclick={() => confirmClearOpen = false}>Cancel</button>
+              <button data-testid="confirm-yes" class="confirm-yes" onclick={handleClearAll}>Yes, clear</button>
+              <button data-testid="confirm-no" class="confirm-no" onclick={() => confirmClearOpen = false}>Cancel</button>
             </div>
           </div>
         {:else}
-          <button class="clear-all-button" onclick={() => confirmClearOpen = true}>
+          <button data-testid="clear-all-button" class="clear-all-button" onclick={() => confirmClearOpen = true}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -252,7 +255,7 @@
             <polyline points="12 6 12 12 16 14" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <p class="empty-title">No History Yet</p>
+        <p data-testid="empty-title" class="empty-title">No History Yet</p>
         <p class="empty-text">Your analysis results will appear here automatically.</p>
       </div>
     {/if}
