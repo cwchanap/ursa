@@ -69,16 +69,44 @@ function generateId(): string {
 /**
  * Compress an image data URL for storage
  * Resizes to max width and converts to JPEG
+ *
+ * @param dataURL - The image data URL to compress
+ * @param timeoutMs - Timeout in milliseconds (default: 10s)
+ * @returns Promise resolving to compressed data URL, or rejecting on timeout/error
  */
-export function compressImageForStorage(dataURL: string): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image();
+export function compressImageForStorage(dataURL: string, timeoutMs = 10000): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    let img: HTMLImageElement | null = new Image();
+    let cleanupDone = false;
+
+    const cleanup = () => {
+      if (cleanupDone) return;
+      cleanupDone = true;
+
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+        timeoutHandle = null;
+      }
+
+      if (img) {
+        img.onload = null;
+        img.onerror = null;
+        img = null;
+      }
+    };
+
+    // Set timeout
+    timeoutHandle = setTimeout(() => {
+      cleanup();
+      reject(new Error('Image compression timeout'));
+    }, timeoutMs);
 
     img.onload = () => {
       // Calculate new dimensions
-      const scale = Math.min(1, HISTORY_THUMBNAIL_MAX_WIDTH / img.width);
-      const width = Math.round(img.width * scale);
-      const height = Math.round(img.height * scale);
+      const scale = Math.min(1, HISTORY_THUMBNAIL_MAX_WIDTH / img!.width);
+      const width = Math.round(img!.width * scale);
+      const height = Math.round(img!.height * scale);
 
       // Create canvas and draw scaled image
       const canvas = document.createElement('canvas');
@@ -87,21 +115,27 @@ export function compressImageForStorage(dataURL: string): Promise<string> {
 
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        // Fallback to original if canvas fails
-        resolve(dataURL);
+        cleanup();
+        reject(new Error('Failed to get canvas context'));
         return;
       }
 
-      ctx.drawImage(img, 0, 0, width, height);
+      ctx.drawImage(img!, 0, 0, width, height);
 
       // Convert to JPEG for better compression
-      const compressed = canvas.toDataURL('image/jpeg', HISTORY_THUMBNAIL_QUALITY);
-      resolve(compressed);
+      try {
+        const compressed = canvas.toDataURL('image/jpeg', HISTORY_THUMBNAIL_QUALITY);
+        cleanup();
+        resolve(compressed);
+      } catch (err) {
+        cleanup();
+        reject(new Error(`Failed to compress image: ${err}`));
+      }
     };
 
     img.onerror = () => {
-      // Fallback to original on error
-      resolve(dataURL);
+      cleanup();
+      reject(new Error('Failed to load image for compression'));
     };
 
     img.src = dataURL;
@@ -183,10 +217,16 @@ export async function addEntry(input: HistoryEntryInput): Promise<HistoryEntry |
   }
 
   try {
-    // Compress the image for storage
-    const compressedImage = await compressImageForStorage(input.imageDataURL);
+    // Compress image for storage
+    let compressedImage: string;
+    try {
+      compressedImage = await compressImageForStorage(input.imageDataURL);
+    } catch (compressionError) {
+      console.warn('Image compression failed, using original image:', compressionError);
+      compressedImage = input.imageDataURL;
+    }
 
-    // Create the full entry
+    // Create full entry
     const entry: HistoryEntry = {
       id: generateId(),
       timestamp: new Date().toISOString(),

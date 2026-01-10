@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import type { DetectionResult } from '../lib/objectDetection.js';
-  import { settingsStore, detectionSettings, updateDetectionSettings } from '../lib/stores/settingsStore';
+  import { detectionSettings, updateDetectionSettings } from '../lib/stores/settingsStore';
   import SettingsFPSSlider from './SettingsFPSSlider.svelte';
 
   // Props
