@@ -7,8 +7,20 @@
  * @module lib/services/exportService
  */
 
-import type { AnalysisMode, DetectionResult, ClassificationAnalysis, OCRAnalysis, DetectedObject, OCRResult } from '../types/analysis';
-import type { ExportResult, ImageExportOptions, JSONExportOptions, TextExportOptions } from '../types/export';
+import type {
+  AnalysisMode,
+  DetectionResult,
+  ClassificationAnalysis,
+  OCRAnalysis,
+  DetectedObject,
+  OCRResult,
+} from '../types/analysis';
+import type {
+  ExportResult,
+  ImageExportOptions,
+  JSONExportOptions,
+  TextExportOptions,
+} from '../types/export';
 import { generateExportFilename, DEFAULT_CLASSIFICATION_OVERLAY } from '../types/export';
 import type { DetectionSettings } from '../types/settings';
 
@@ -33,7 +45,10 @@ function downloadBlob(blob: Blob, filename: string): void {
 /**
  * Get dimensions from a media element
  */
-function getMediaDimensions(element: HTMLImageElement | HTMLVideoElement): { width: number; height: number } {
+function getMediaDimensions(element: HTMLImageElement | HTMLVideoElement): {
+  width: number;
+  height: number;
+} {
   if (element instanceof HTMLVideoElement) {
     return { width: element.videoWidth, height: element.videoHeight };
   }
@@ -57,8 +72,16 @@ function drawMediaToCanvas(
 // ============================================================================
 
 const DETECTION_COLORS = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
-  '#F7DC6F', '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA'
+  '#FF6B6B',
+  '#4ECDC4',
+  '#45B7D1',
+  '#FFA07A',
+  '#98D8C8',
+  '#F7DC6F',
+  '#BB8FCE',
+  '#85C1E9',
+  '#F8C471',
+  '#82E0AA',
 ];
 
 /**
@@ -69,10 +92,7 @@ function drawDetections(
   detections: DetectedObject[],
   settings: Partial<DetectionSettings> = {}
 ): void {
-  const {
-    showLabels = true,
-    showScores = true,
-  } = settings;
+  const { showLabels = true, showScores = true } = settings;
 
   const lineWidth = 2;
   const fontSize = 16;
@@ -129,15 +149,8 @@ function drawClassificationOverlay(
   canvasWidth: number,
   canvasHeight: number
 ): void {
-  const {
-    barHeight,
-    backgroundColor,
-    textColor,
-    fontFamily,
-    fontSize,
-    topPredictions,
-    padding,
-  } = DEFAULT_CLASSIFICATION_OVERLAY;
+  const { barHeight, backgroundColor, textColor, fontFamily, fontSize, topPredictions, padding } =
+    DEFAULT_CLASSIFICATION_OVERLAY;
 
   // Draw background bar
   ctx.fillStyle = backgroundColor;
@@ -181,10 +194,7 @@ function drawClassificationOverlay(
 /**
  * Draw OCR text region boxes on a canvas
  */
-function drawOCROverlay(
-  ctx: CanvasRenderingContext2D,
-  textRegions: OCRResult[]
-): void {
+function drawOCROverlay(ctx: CanvasRenderingContext2D, textRegions: OCRResult[]): void {
   ctx.strokeStyle = '#10B981'; // Green
   ctx.lineWidth = 2;
   ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
@@ -223,7 +233,8 @@ export async function exportDetectionImage(
 ): Promise<ExportResult> {
   try {
     const { width, height } = getMediaDimensions(imageElement);
-    const filename = options.filename || generateExportFilename('detection', options.format || 'png');
+    const filename =
+      options.filename || generateExportFilename('detection', options.format || 'png');
 
     // Create canvas
     const canvas = document.createElement('canvas');
@@ -278,7 +289,8 @@ export async function exportClassificationImage(
 ): Promise<ExportResult> {
   try {
     const { width, height } = getMediaDimensions(imageElement);
-    const filename = options.filename || generateExportFilename('classification', options.format || 'png');
+    const filename =
+      options.filename || generateExportFilename('classification', options.format || 'png');
 
     // Create canvas with extra space for overlay
     const canvas = document.createElement('canvas');
@@ -427,9 +439,7 @@ export async function exportResultsAsJSON(
     const filename = options.filename || generateExportFilename(mode, 'json');
     const prettyPrint = options.prettyPrint !== false;
 
-    const json = prettyPrint
-      ? JSON.stringify(results, null, 2)
-      : JSON.stringify(results);
+    const json = prettyPrint ? JSON.stringify(results, null, 2) : JSON.stringify(results);
 
     const blob = new Blob([json], { type: 'application/json' });
     downloadBlob(blob, filename);
@@ -450,29 +460,17 @@ export async function copyResultsAsJSON(
   try {
     const json = JSON.stringify(results, null, 2);
 
+    // Use modern Clipboard API (requires secure context)
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(json);
       return { success: true };
     }
 
-    // Fallback for non-secure contexts
-    const textArea = document.createElement('textarea');
-    textArea.value = json;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    textArea.style.top = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-
-    const success = document.execCommand('copy');
-    document.body.removeChild(textArea);
-
-    if (!success) {
-      return { success: false, error: 'execCommand copy failed' };
-    }
-
-    return { success: true };
+    // Clipboard API unavailable - return user-facing error
+    return {
+      success: false,
+      error: 'Clipboard API unavailable. Please copy the JSON manually or use the download button.',
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: message };

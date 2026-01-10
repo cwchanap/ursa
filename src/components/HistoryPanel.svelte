@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
   import type { HistoryEntry } from '../lib/types/history';
   import { isDetectionResult, isClassificationResult, isOCRResult } from '../lib/types/history';
   import {

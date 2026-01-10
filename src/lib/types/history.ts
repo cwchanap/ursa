@@ -8,7 +8,6 @@
  */
 
 import type {
-  AnalysisMode,
   DetectionResult,
   ClassificationAnalysis,
   OCRAnalysis,
@@ -20,24 +19,42 @@ import type {
 
 /**
  * A single history entry representing a completed analysis
+ * Discriminated union based on analysisType - prevents invalid type combinations at compile time
  */
-export interface HistoryEntry {
-  /** Unique identifier (UUID) */
-  id: string;
-  /** ISO 8601 timestamp when analysis was completed */
-  timestamp: string;
-  /** Type of analysis performed */
-  analysisType: AnalysisMode;
-  /** Base64 encoded original image (compressed for storage) */
-  imageDataURL: string;
-  /** Analysis results */
-  results: DetectionResult | ClassificationAnalysis | OCRAnalysis;
-  /** Original image dimensions */
-  imageDimensions: {
-    width: number;
-    height: number;
-  };
-}
+export type HistoryEntry =
+  | {
+      id: string;
+      timestamp: string;
+      analysisType: 'detection';
+      imageDataURL: string;
+      results: DetectionResult;
+      imageDimensions: {
+        width: number;
+        height: number;
+      };
+    }
+  | {
+      id: string;
+      timestamp: string;
+      analysisType: 'classification';
+      imageDataURL: string;
+      results: ClassificationAnalysis;
+      imageDimensions: {
+        width: number;
+        height: number;
+      };
+    }
+  | {
+      id: string;
+      timestamp: string;
+      analysisType: 'ocr';
+      imageDataURL: string;
+      results: OCRAnalysis;
+      imageDimensions: {
+        width: number;
+        height: number;
+      };
+    };
 
 /**
  * Input for creating a new history entry (id and timestamp auto-generated)
