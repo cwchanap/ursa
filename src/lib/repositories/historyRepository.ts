@@ -151,6 +151,7 @@ export function compressImageForStorage(dataURL: string, timeoutMs = 10000): Pro
  */
 export function getEntries(): HistoryEntry[] {
   if (!isLocalStorageAvailable()) {
+    console.warn('localStorage unavailable: unable to load history entries');
     return [];
   }
 
@@ -213,6 +214,7 @@ function saveEntries(entries: HistoryEntry[]): boolean {
  */
 export async function addEntry(input: HistoryEntryInput): Promise<HistoryEntry | null> {
   if (!isLocalStorageAvailable()) {
+    console.warn('localStorage unavailable: cannot add history entry');
     return null;
   }
 

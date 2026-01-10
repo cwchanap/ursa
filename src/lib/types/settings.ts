@@ -42,7 +42,7 @@ export interface OCRSettings {
    *
    * @see https://github.com/naptha/tesseract.js/blob/master/docs/tesseract.js#languages
    */
-  language: string;
+  language: SupportedLanguage;
   /** Minimum confidence threshold 0-100 (default: 50) */
   minConfidence: number;
 }
@@ -112,7 +112,7 @@ export const SUPPORTED_LANGUAGES = [
   'jpn', // Japanese
 ] as const;
 
-export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 export const SETTINGS_CONSTRAINTS = {
   confidenceThreshold: { min: 0, max: 100 },
@@ -124,9 +124,9 @@ export const SETTINGS_CONSTRAINTS = {
     // Quality tier thresholds for FPS slider labels/colors
     // Must be within min-max range and in ascending order
     qualityThresholds: {
-      low: 3,      // ≤ 3: Battery Saver
-      medium: 7,   // ≤ 7: Balanced
-      high: 10,    // ≤ 10: Smooth
+      low: 3, // ≤ 3: Battery Saver
+      medium: 7, // ≤ 7: Balanced
+      high: 10, // ≤ 10: Smooth
       // > high: High Performance
     } as const,
   },
@@ -140,7 +140,7 @@ export const SETTINGS_CONSTRAINTS = {
  * Validate and sanitize OCR language code
  * Returns language if valid, otherwise returns default
  */
-export function validateLanguage(language: unknown): string {
+export function validateLanguage(language: unknown): SupportedLanguage {
   // Handle null/undefined
   if (language === null || language === undefined) {
     return DEFAULT_OCR_SETTINGS.language;
@@ -154,7 +154,7 @@ export function validateLanguage(language: unknown): string {
   // Check if language is in supported list
   const normalizedLanguage = language.trim().toLowerCase();
   if (SUPPORTED_LANGUAGES.includes(normalizedLanguage as SupportedLanguage)) {
-    return normalizedLanguage;
+    return normalizedLanguage as SupportedLanguage;
   }
 
   // Return default for invalid language codes
@@ -187,10 +187,7 @@ export function validateFPSThresholds(): void {
 /**
  * Clamp a value to a valid range for a setting
  */
-export function clampSetting(
-  value: number,
-  setting: keyof typeof SETTINGS_CONSTRAINTS
-): number {
+export function clampSetting(value: number, setting: keyof typeof SETTINGS_CONSTRAINTS): number {
   const { min, max } = SETTINGS_CONSTRAINTS[setting];
   return Math.max(min, Math.min(max, value));
 }

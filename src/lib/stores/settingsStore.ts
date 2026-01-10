@@ -14,6 +14,7 @@ import type {
   DetectionSettings,
   OCRSettings,
   PerformanceSettings,
+  SupportedLanguage,
 } from '../types/settings';
 import { DEFAULT_SETTINGS, clampSetting } from '../types/settings';
 import { loadSettings, saveSettings, resetToDefaults } from '../repositories/settingsRepository';
@@ -92,6 +93,16 @@ function createSettingsStore() {
       const current = get({ subscribe });
       saveSettings(current);
     },
+
+    /**
+     * Cleanup any pending timeouts (useful for HMR or app shutdown)
+     */
+    cleanup: () => {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        saveTimeout = null;
+      }
+    },
   };
 }
 
@@ -100,6 +111,17 @@ function createSettingsStore() {
 // ============================================================================
 
 export const settingsStore = createSettingsStore();
+
+// ============================================================================
+// HMR Cleanup
+// ============================================================================
+
+// Cleanup pending saves during HMR
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    settingsStore.cleanup();
+  });
+}
 
 // ============================================================================
 // Derived Stores
@@ -179,7 +201,7 @@ export function updateOCRSettings(updates: Partial<OCRSettings>): void {
 /**
  * Update OCR language specifically
  */
-export function updateOCRLanguage(language: string): void {
+export function updateOCRLanguage(language: SupportedLanguage): void {
   settingsStore.update((settings) => ({
     ...settings,
     ocr: {
