@@ -151,12 +151,32 @@ describe('history types', () => {
     });
 
     it('returns true for valid classification entry', () => {
-      const entry = { ...validEntry, analysisType: 'classification' as const };
+      const entry = {
+        ...validEntry,
+        analysisType: 'classification' as const,
+        results: {
+          predictions: [{ label: 'cat', confidence: 0.9 }],
+          inferenceTime: 50,
+          timestamp: '2025-01-15T10:00:00.000Z',
+          imageDimensions: { width: 800, height: 600 },
+        },
+      };
       expect(isValidHistoryEntry(entry)).toBe(true);
     });
 
     it('returns true for valid OCR entry', () => {
-      const entry = { ...validEntry, analysisType: 'ocr' as const };
+      const entry = {
+        ...validEntry,
+        analysisType: 'ocr' as const,
+        results: {
+          textRegions: [{ text: 'hello', confidence: 0.95 }],
+          fullText: 'hello',
+          processingTime: 100,
+          timestamp: '2025-01-15T10:00:00.000Z',
+          imageDimensions: { width: 800, height: 600 },
+          language: 'eng',
+        },
+      };
       expect(isValidHistoryEntry(entry)).toBe(true);
     });
 
