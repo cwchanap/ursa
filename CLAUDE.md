@@ -21,9 +21,8 @@ bun run build        # Production build
 bun run preview      # Preview production build
 
 # Testing (Vitest with happy-dom)
-bun run test                     # Run all tests
+bun run test                     # Run all tests (use this, not 'bun test')
 bun run test:watch               # Watch mode
-bun test src/components/Button   # Run single test file (partial match)
 
 # Code Quality
 bun run lint         # Run ESLint (TypeScript + Astro)
