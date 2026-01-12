@@ -220,3 +220,9 @@ describe('historyRepository', () => {
     });
   });
 });
+
+// Note: compressImageForStorage now validates image dimensions in onload handler
+// to prevent creating 0x0 canvases. Testing this specific edge case
+// requires complex DOM mocking. The fix ensures img.width and img.height
+// are checked before canvas creation, rejecting with "Image has zero width or height"
+// if either dimension is 0.

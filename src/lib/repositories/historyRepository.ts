@@ -128,6 +128,13 @@ export function compressImageForStorage(
     }, timeoutMs);
 
     img.onload = () => {
+      // Validate image dimensions
+      if (img!.width === 0 || img!.height === 0) {
+        cleanup();
+        reject(new Error('Image has zero width or height'));
+        return;
+      }
+
       // Calculate new dimensions
       const scale = Math.min(1, HISTORY_THUMBNAIL_MAX_WIDTH / img!.width);
       const width = Math.round(img!.width * scale);
