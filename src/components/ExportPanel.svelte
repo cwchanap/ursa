@@ -100,11 +100,10 @@
           break;
         case 'ocr':
           if (ocrResults) {
-            const results = await exportService.exportOCRResults(
+            result = await exportService.exportOCRImage(
               imageElement,
               ocrResults
             );
-            result = results.imageResult;
           }
           break;
       }
