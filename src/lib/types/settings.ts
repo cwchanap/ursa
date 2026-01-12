@@ -170,7 +170,7 @@ export function validateFPSThresholds(): void {
   const { low, medium, high } = qualityThresholds;
 
   // Check thresholds are within min-max range
-  if (low < min || high > max) {
+  if (low < min || medium < min || medium > max || high > max) {
     throw new Error(
       `FPS quality thresholds [${low}, ${medium}, ${high}] must be within min-max range [${min}, ${max}]`
     );

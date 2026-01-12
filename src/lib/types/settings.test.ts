@@ -105,6 +105,22 @@ describe('settings types', () => {
         /FPS quality thresholds must be in ascending order/
       );
     });
+
+    it('throws if medium threshold is below min', () => {
+      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).medium = 0;
+
+      expect(() => validateFPSThresholds()).toThrow(
+        /FPS quality thresholds.*must be within min-max range/
+      );
+    });
+
+    it('throws if medium threshold is above max', () => {
+      (SETTINGS_CONSTRAINTS.videoFPS.qualityThresholds as any).medium = 20;
+
+      expect(() => validateFPSThresholds()).toThrow(
+        /FPS quality thresholds.*must be within min-max range/
+      );
+    });
   });
 
   describe('clampSetting', () => {

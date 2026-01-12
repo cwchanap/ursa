@@ -45,10 +45,18 @@ function createHistoryStore() {
      */
     reload: () => {
       const entries = getEntries();
-      update((state) => ({
-        ...state,
-        entries,
-      }));
+      update((state) => {
+        // Clear selectedEntryId if it no longer exists in the new entries list
+        const selectedEntryExists = state.selectedEntryId
+          ? entries.some((e) => e.id === state.selectedEntryId)
+          : true;
+
+        return {
+          ...state,
+          entries,
+          selectedEntryId: selectedEntryExists ? state.selectedEntryId : null,
+        };
+      });
     },
   };
 }
@@ -66,10 +74,7 @@ export const historyStore = createHistoryStore();
 /**
  * All history entries (most recent first)
  */
-export const historyEntries = derived(
-  historyStore,
-  ($state) => $state.entries
-);
+export const historyEntries = derived(historyStore, ($state) => $state.entries);
 
 /**
  * Currently selected entry (for viewing)
@@ -82,26 +87,20 @@ export const selectedEntry = derived(historyStore, ($state) => {
 /**
  * Whether there are any history entries
  */
-export const hasHistory = derived(
-  historyStore,
-  ($state) => $state.entries.length > 0
-);
+export const hasHistory = derived(historyStore, ($state) => $state.entries.length > 0);
 
 /**
  * Number of history entries
  */
-export const historyCount = derived(
-  historyStore,
-  ($state) => $state.entries.length
-);
+export const historyCount = derived(historyStore, ($state) => $state.entries.length);
 
 /**
  * Whether an entry is currently selected
  */
-export const hasSelectedEntry = derived(
-  historyStore,
-  ($state) => $state.selectedEntryId !== null
-);
+export const hasSelectedEntry = derived(historyStore, ($state) => {
+  if (!$state.selectedEntryId) return false;
+  return $state.entries.some((e) => e.id === $state.selectedEntryId);
+});
 
 // ============================================================================
 // Action Functions

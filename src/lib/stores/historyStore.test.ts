@@ -31,8 +31,20 @@ const createMockEntry = (
     type === 'detection'
       ? { objects: [], inferenceTime: 100 }
       : type === 'classification'
-        ? { predictions: [{ label: 'cat', confidence: 0.9 }], inferenceTime: 50, timestamp: new Date().toISOString(), imageDimensions: { width: 800, height: 600 } }
-        : { textRegions: [], fullText: 'test', processingTime: 200, timestamp: new Date().toISOString(), imageDimensions: { width: 800, height: 600 }, language: 'eng' },
+        ? {
+            predictions: [{ label: 'cat', confidence: 0.9 }],
+            inferenceTime: 50,
+            timestamp: new Date().toISOString(),
+            imageDimensions: { width: 800, height: 600 },
+          }
+        : {
+            textRegions: [],
+            fullText: 'test',
+            processingTime: 200,
+            timestamp: new Date().toISOString(),
+            imageDimensions: { width: 800, height: 600 },
+            language: 'eng',
+          },
   imageDimensions: { width: 800, height: 600 },
 });
 
@@ -95,6 +107,34 @@ describe('historyStore', () => {
       expect(getEntries).toHaveBeenCalled();
       expect(get(historyStore).entries).toHaveLength(1);
     });
+
+    it('reload clears selectedEntryId if selected entry no longer exists', () => {
+      const entries = [createMockEntry('1'), createMockEntry('2')];
+      historyStore.set({ entries, selectedEntryId: '2' });
+
+      // Reload with entries that don't include '2'
+      const newEntries = [createMockEntry('1')];
+      vi.mocked(getEntries).mockReturnValueOnce(newEntries);
+
+      historyStore.reload();
+
+      expect(get(historyStore).selectedEntryId).toBeNull();
+      expect(get(hasSelectedEntry)).toBe(false);
+    });
+
+    it('reload preserves selectedEntryId if selected entry still exists', () => {
+      const entries = [createMockEntry('1'), createMockEntry('2')];
+      historyStore.set({ entries, selectedEntryId: '1' });
+
+      // Reload with entries that still include '1'
+      const newEntries = [createMockEntry('1'), createMockEntry('3')];
+      vi.mocked(getEntries).mockReturnValueOnce(newEntries);
+
+      historyStore.reload();
+
+      expect(get(historyStore).selectedEntryId).toBe('1');
+      expect(get(hasSelectedEntry)).toBe(true);
+    });
   });
 
   describe('derived stores', () => {
@@ -141,6 +181,11 @@ describe('historyStore', () => {
     });
 
     it('hasSelectedEntry returns false when not selected', () => {
+      expect(get(hasSelectedEntry)).toBe(false);
+    });
+
+    it('hasSelectedEntry returns false when selectedEntryId points to non-existent entry', () => {
+      historyStore.set({ entries, selectedEntryId: 'nonexistent' });
       expect(get(hasSelectedEntry)).toBe(false);
     });
   });
