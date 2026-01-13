@@ -102,9 +102,9 @@ describe('ExportPanel', () => {
       const exportButton = screen.getByTestId('export-button');
       await fireEvent.click(exportButton);
 
-      expect(screen.getByText('Download Image (PNG)')).toBeDefined();
-      expect(screen.getByText('Copy JSON to Clipboard')).toBeDefined();
-      expect(screen.getByText('Download JSON')).toBeDefined();
+      expect(screen.getByText('Download Image (PNG)')).toBeInTheDocument();
+      expect(screen.getByText('Copy JSON to Clipboard')).toBeInTheDocument();
+      expect(screen.getByText('Download JSON')).toBeInTheDocument();
     });
 
     it('closes dropdown when clicking outside', async () => {
@@ -119,7 +119,7 @@ describe('ExportPanel', () => {
       const exportButton = screen.getByTestId('export-button');
       await fireEvent.click(exportButton);
 
-      expect(screen.getByText('Download Image (PNG)')).toBeDefined();
+      expect(screen.getByText('Download Image (PNG)')).toBeInTheDocument();
 
       // Click outside the export panel
       fireEvent.click(document.body);
@@ -154,7 +154,7 @@ describe('ExportPanel', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByText('Exported: test.png')).toBeDefined();
+        expect(screen.queryByText('Exported: test.png')).toBeInTheDocument();
       });
     });
   });
@@ -181,7 +181,7 @@ describe('ExportPanel', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByText('Exported: test.png')).toBeDefined();
+        expect(screen.queryByText('Exported: test.png')).toBeInTheDocument();
       });
     });
   });
@@ -212,7 +212,7 @@ describe('ExportPanel', () => {
       expect(exportService.exportOCRText).not.toHaveBeenCalled();
 
       await waitFor(() => {
-        expect(screen.queryByText('Exported: test.png')).toBeDefined();
+        expect(screen.queryByText('Exported: test.png')).toBeInTheDocument();
       });
     });
 
@@ -228,10 +228,10 @@ describe('ExportPanel', () => {
       const exportButton = screen.getByTestId('export-button');
       await fireEvent.click(exportButton);
 
-      expect(screen.getByText('Download Image (PNG)')).toBeDefined();
-      expect(screen.getByText('Copy JSON to Clipboard')).toBeDefined();
-      expect(screen.getByText('Download JSON')).toBeDefined();
-      expect(screen.getByText('Download Text (.txt)')).toBeDefined();
+      expect(screen.getByText('Download Image (PNG)')).toBeInTheDocument();
+      expect(screen.getByText('Copy JSON to Clipboard')).toBeInTheDocument();
+      expect(screen.getByText('Download JSON')).toBeInTheDocument();
+      expect(screen.getByText('Download Text (.txt)')).toBeInTheDocument();
     });
 
     it('exports OCR text when clicking download text', async () => {
@@ -252,7 +252,7 @@ describe('ExportPanel', () => {
       expect(exportService.exportOCRText).toHaveBeenCalledWith(ocrResults);
 
       await waitFor(() => {
-        expect(screen.queryByText('Exported: test.txt')).toBeDefined();
+        expect(screen.queryByText('Exported: test.txt')).toBeInTheDocument();
       });
     });
   });
@@ -276,7 +276,7 @@ describe('ExportPanel', () => {
       expect(exportService.exportResultsAsJSON).toHaveBeenCalledWith('detection', detectionResults);
 
       await waitFor(() => {
-        expect(screen.queryByText('Exported: test.json')).toBeDefined();
+        expect(screen.queryByText('Exported: test.json')).toBeInTheDocument();
       });
     });
 
@@ -298,7 +298,7 @@ describe('ExportPanel', () => {
       expect(exportService.copyResultsAsJSON).toHaveBeenCalledWith(detectionResults);
 
       await waitFor(() => {
-        expect(screen.queryByText('Copied to clipboard!')).toBeDefined();
+        expect(screen.queryByText('Copied to clipboard!')).toBeInTheDocument();
       });
     });
   });
@@ -324,7 +324,7 @@ describe('ExportPanel', () => {
       await fireEvent.click(downloadButton);
 
       await waitFor(() => {
-        expect(screen.queryByText('Export failed')).toBeDefined();
+        expect(screen.queryByText('Export failed')).toBeInTheDocument();
       });
     });
 
@@ -349,7 +349,7 @@ describe('ExportPanel', () => {
       await fireEvent.click(copyButton);
 
       await waitFor(() => {
-        expect(screen.queryByText('Clipboard error')).toBeDefined();
+        expect(screen.queryByText('Clipboard error')).toBeInTheDocument();
       });
     });
   });
@@ -371,7 +371,7 @@ describe('ExportPanel', () => {
       await fireEvent.click(downloadButton);
 
       await waitFor(() => {
-        expect(screen.queryByText('Exported: test.png')).toBeDefined();
+        expect(screen.queryByText('Exported: test.png')).toBeInTheDocument();
       });
 
       // Fast-forward 3 seconds
