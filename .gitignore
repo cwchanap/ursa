@@ -30,3 +30,4 @@ test-results/
 
 # specs folder - keep locally but exclude from version control
 specs/coverage/
+.claude/settings.local.json
