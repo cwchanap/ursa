@@ -29,5 +29,5 @@ playwright-report/
 test-results/
 
 # specs folder - keep locally but exclude from version control
-specs/coverage/
+specs/
 .claude/settings.local.json
