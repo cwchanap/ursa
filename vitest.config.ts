@@ -13,6 +13,11 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
     setupFiles: ['./src/tests/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'html'],
+      exclude: ['node_modules/', 'src/tests/', '**/*.config.*', '**/*.d.ts', 'src/lib/shims/'],
+    },
     alias: {
       // Force Vitest to use client-side Svelte
       svelte: 'svelte',
