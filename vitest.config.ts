@@ -14,9 +14,15 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/tests/setup.ts'],
     coverage: {
-      provider: 'v8',
+      provider: 'istanbul',
       reporter: ['text', 'lcov', 'html'],
-      exclude: ['node_modules/', 'src/tests/', '**/*.config.*', '**/*.d.ts', 'src/lib/shims/'],
+      exclude: [
+        '**/node_modules/**',
+        'src/tests/**',
+        '**/*.config.*',
+        '**/*.d.ts',
+        'src/lib/shims/**',
+      ],
     },
     alias: {
       // Force Vitest to use client-side Svelte

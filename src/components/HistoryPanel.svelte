@@ -365,13 +365,15 @@
   flex-direction: column;
   transform: translateX(-100%);
   visibility: hidden;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s;
+  transition-delay: visibility 0.4s, transform 0s;
   box-shadow: 10px 0 40px rgba(0, 0, 0, 0.5);
 }
 
 .history-panel.open {
   transform: translateX(0);
   visibility: visible;
+  transition-delay: visibility 0s, transform 0s;
 }
 
 /* Header */
