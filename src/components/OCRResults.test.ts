@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import OCRResults from './OCRResults.svelte';
 import type { OCRAnalysis } from '../lib/types/analysis';
@@ -264,12 +264,23 @@ describe('OCRResults Component', () => {
   });
 
   describe('copy to clipboard', () => {
+    const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+
     beforeEach(() => {
       Object.defineProperty(navigator, 'clipboard', {
         value: { writeText: vi.fn().mockResolvedValue(undefined) },
         configurable: true,
         writable: true,
       });
+    });
+
+    afterEach(() => {
+      if (originalClipboardDescriptor) {
+        Object.defineProperty(navigator, 'clipboard', originalClipboardDescriptor);
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (navigator as any).clipboard;
+      }
     });
 
     it('copies text and shows success state', async () => {
