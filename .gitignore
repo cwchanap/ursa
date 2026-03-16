@@ -27,6 +27,7 @@ pnpm-debug.log*
 # test results
 playwright-report/
 test-results/
+coverage/
 
 # specs folder - keep locally but exclude from version control
 specs/
