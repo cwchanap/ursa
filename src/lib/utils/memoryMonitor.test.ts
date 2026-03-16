@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MemoryMonitor, getMemoryMonitor, startMemoryMonitoring, stopMemoryMonitoring } from './memoryMonitor';
+import { MemoryMonitor } from './memoryMonitor';
 
 // Helper to set up a mock performance.memory API
 function mockPerformanceMemory(
@@ -46,7 +46,7 @@ describe('MemoryMonitor', () => {
     });
 
     it('uses default options when none provided', () => {
-      const monitor = new MemoryMonitor({ logWarnings: false });
+      const monitor = new MemoryMonitor();
       expect(monitor.isSupportedBrowser()).toBe(true);
     });
   });
@@ -137,19 +137,22 @@ describe('MemoryMonitor', () => {
 
     it('does not call onWarning when growth is below threshold', () => {
       const onWarning = vi.fn();
+      // Use 60s interval so growthRate is computed over a ≥30s window,
+      // ensuring the threshold logic is actually exercised (not bypassed by null growthRate)
       const monitor = new MemoryMonitor({
         logWarnings: false,
-        checkInterval: 1000,
+        checkInterval: 60000,
         growthThresholdMB: 100, // very high threshold
         onWarning,
       });
 
       monitor.start();
 
-      // Small memory increase
+      // Small memory increase (~5MB/min growth rate, well below 100MB/min threshold)
       mockPerformanceMemory(55 * 1024 * 1024);
 
-      vi.advanceTimersByTime(70000);
+      // Advance past one interval (60s): growth ~= 5MB/min < 100MB/min threshold
+      vi.advanceTimersByTime(61000);
 
       expect(onWarning).not.toHaveBeenCalled();
       monitor.stop();
@@ -158,42 +161,45 @@ describe('MemoryMonitor', () => {
 });
 
 describe('singleton functions', () => {
-  beforeEach(() => {
+  // Dynamic import reference, reset between tests so each test gets a fresh module instance
+  let memoryModule: typeof import('./memoryMonitor');
+
+  beforeEach(async () => {
     vi.useFakeTimers();
     mockPerformanceMemory();
-    // Reset module-level singleton between tests via stopMemoryMonitoring
-    stopMemoryMonitoring();
-    // Clear the module-level singleton by re-importing is tricky;
-    // we rely on the fact that getMemoryMonitor returns same instance
+    // Reset the module registry so the singleton is cleared for each test
+    vi.resetModules();
+    memoryModule = await import('./memoryMonitor');
+    memoryModule.stopMemoryMonitoring();
   });
 
   afterEach(() => {
-    stopMemoryMonitoring();
+    memoryModule?.stopMemoryMonitoring();
     vi.useRealTimers();
     removePerformanceMemory();
   });
 
   it('getMemoryMonitor returns a MemoryMonitor instance', () => {
-    const monitor = getMemoryMonitor({ logWarnings: false });
-    expect(monitor).toBeInstanceOf(MemoryMonitor);
+    const monitor = memoryModule.getMemoryMonitor({ logWarnings: false });
+    expect(monitor).toBeInstanceOf(memoryModule.MemoryMonitor);
   });
 
   it('getMemoryMonitor returns the same instance on repeated calls', () => {
-    const m1 = getMemoryMonitor({ logWarnings: false });
-    const m2 = getMemoryMonitor({ logWarnings: false });
+    const m1 = memoryModule.getMemoryMonitor({ logWarnings: false });
+    const m2 = memoryModule.getMemoryMonitor({ logWarnings: false });
     expect(m1).toBe(m2);
   });
 
   it('startMemoryMonitoring starts the global monitor', () => {
-    startMemoryMonitoring({ logWarnings: false });
-    const monitor = getMemoryMonitor();
+    memoryModule.startMemoryMonitoring({ logWarnings: false });
+    const monitor = memoryModule.getMemoryMonitor();
     expect(monitor.isMonitoring()).toBe(true);
   });
 
   it('stopMemoryMonitoring stops the global monitor', () => {
-    startMemoryMonitoring({ logWarnings: false });
-    stopMemoryMonitoring();
-    const monitor = getMemoryMonitor();
+    memoryModule.startMemoryMonitoring({ logWarnings: false });
+    memoryModule.stopMemoryMonitoring();
+    const monitor = memoryModule.getMemoryMonitor();
     expect(monitor.isMonitoring()).toBe(false);
   });
 });
